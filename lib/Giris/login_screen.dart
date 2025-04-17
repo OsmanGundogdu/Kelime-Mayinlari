@@ -68,25 +68,47 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('Giriş Yap')),
+      appBar: AppBar(
+        title: const Text('Giriş Yap'),
+        backgroundColor: Colors.blueAccent,
+      ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            TextField(
+            TextFormField(
               controller: _usernameController,
-              decoration: const InputDecoration(labelText: 'Kullanıcı Adı'),
+              decoration: InputDecoration(
+                labelText: 'Kullanıcı Adı',
+                border: OutlineInputBorder(),
+                contentPadding:
+                    EdgeInsets.symmetric(vertical: 12, horizontal: 10),
+              ),
             ),
-            TextField(
+            const SizedBox(height: 20),
+            TextFormField(
               controller: _passwordController,
               obscureText: true,
-              decoration: const InputDecoration(labelText: 'Şifre'),
+              decoration: InputDecoration(
+                labelText: 'Şifre',
+                border: OutlineInputBorder(),
+                contentPadding:
+                    EdgeInsets.symmetric(vertical: 12, horizontal: 10),
+              ),
             ),
             const SizedBox(height: 20),
             ElevatedButton(
               onPressed: _signIn,
-              child: const Text('Giriş Yap'),
+              style: ElevatedButton.styleFrom(
+                minimumSize: Size(double.infinity, 50),
+                backgroundColor: Colors.blueAccent,
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12)),
+              ),
+              child: const Text('Giriş Yap', style: TextStyle(fontSize: 18)),
             ),
+            const SizedBox(height: 10),
             TextButton(
               onPressed: () {
                 Navigator.push(
@@ -94,7 +116,10 @@ class _LoginScreenState extends State<LoginScreen> {
                   MaterialPageRoute(builder: (_) => const RegisterScreen()),
                 );
               },
-              child: const Text('Hesabın yok mu? Kayıt Ol'),
+              child: const Text(
+                'Hesabın yok mu? Kayıt Ol',
+                style: TextStyle(fontSize: 16, color: Colors.blueAccent),
+              ),
             ),
           ],
         ),
