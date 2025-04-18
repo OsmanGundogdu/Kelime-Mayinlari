@@ -51,7 +51,13 @@ class _LoginScreenState extends State<LoginScreen> {
       if (storedPassword == hashPassword(password)) {
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (_) => const HomeScreen()),
+          MaterialPageRoute(
+            builder: (_) => HomeScreen(
+              username: user['username'],
+              gamesPlayed: user['gameplayed'] ?? 0,
+              gamesWon: user['gamewon'] ?? 0,
+            ),
+          ),
         );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
