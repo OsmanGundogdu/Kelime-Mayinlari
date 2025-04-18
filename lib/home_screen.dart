@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:proje2/Oyun/active_games_screen.dart';
+import 'package:proje2/Oyun/completed_games.dart';
+import 'package:proje2/Oyun/new_game_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   final String username;
@@ -89,14 +92,30 @@ class HomeScreen extends StatelessWidget {
                             context,
                             label: 'Yeni Oyun',
                             icon: Icons.add_circle_outline,
-                            onPressed: () {},
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => const NewGameScreen(),
+                                ),
+                              );
+                            },
                           ),
                           const SizedBox(width: 40),
                           _buildCircleMenuButton(
                             context,
                             label: 'Aktif\nOyunlar',
                             icon: Icons.play_circle_fill,
-                            onPressed: () {},
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => const ActiveGamesScreen(
+                                    activeGames: [],
+                                  ),
+                                ),
+                              );
+                            },
                           ),
                         ],
                       ),
@@ -105,7 +124,16 @@ class HomeScreen extends StatelessWidget {
                         context,
                         label: 'Biten\nOyunlar',
                         icon: Icons.history,
-                        onPressed: () {},
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const CompletedGamesScreen(
+                                completedGames: [],
+                              ),
+                            ),
+                          );
+                        },
                       ),
                     ],
                   ),

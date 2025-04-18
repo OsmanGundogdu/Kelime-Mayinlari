@@ -27,4 +27,8 @@ flutter:
 
   assets:
     - assets/images/game_bg.png
-    
+    - assets/images/new_game_bg.png
+    - assets/images/active_games_bg.png
+    - assets/images/completed_games_bg.png
+    - assets/images/register_bg.png
+    - assets/images/login_bg.png
