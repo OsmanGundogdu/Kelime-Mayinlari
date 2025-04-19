@@ -114,7 +114,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-          title: const Text('Kayıt Ol'), backgroundColor: Colors.blueAccent),
+          title: const Text('Kayıt Ol'), backgroundColor: Colors.blueGrey),
       body: Stack(
         children: [
           Positioned.fill(
@@ -197,7 +197,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   onPressed: _register,
                   style: ElevatedButton.styleFrom(
                     minimumSize: Size(double.infinity, 50),
-                    backgroundColor: Colors.blueAccent,
+                    backgroundColor: Colors.blueGrey.withOpacity(0.7),
                     shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12)),
                   ),
@@ -213,8 +213,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       (route) => false,
                     );
                   },
-                  child: const Text('Zaten kaydoldum, giriş yap',
-                      style: TextStyle(fontSize: 16, color: Colors.blueAccent)),
+                  child: const Text('Zaten kaydoldum, Giriş Yap',
+                      style: TextStyle(fontSize: 16, color: Colors.blueGrey)),
                 ),
               ],
             ),

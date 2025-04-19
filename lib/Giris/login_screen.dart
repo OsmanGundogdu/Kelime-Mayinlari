@@ -45,17 +45,23 @@ class _LoginScreenState extends State<LoginScreen> {
         return;
       }
 
-      final user = snapshot.docs.first;
-      final storedPassword = user['password'];
+      final userDoc = snapshot.docs.first;
+      final storedPassword = userDoc['password'];
 
       if (storedPassword == hashPassword(password)) {
+        final String userId = userDoc.id; // Firestore'daki döküman ID
+        final String username = userDoc['username'];
+        final int gamesPlayed = userDoc['gameplayed'] ?? 0;
+        final int gamesWon = userDoc['gamewon'] ?? 0;
+
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
             builder: (_) => HomeScreen(
-              username: user['username'],
-              gamesPlayed: user['gameplayed'] ?? 0,
-              gamesWon: user['gamewon'] ?? 0,
+              userId: userId,
+              username: username,
+              gamesPlayed: gamesPlayed,
+              gamesWon: gamesWon,
             ),
           ),
         );
@@ -76,7 +82,7 @@ class _LoginScreenState extends State<LoginScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Giriş Yap', style: TextStyle(color: Colors.black)),
-        backgroundColor: Colors.blueAccent,
+        backgroundColor: Colors.blueGrey,
       ),
       body: Stack(
         children: [
@@ -86,9 +92,7 @@ class _LoginScreenState extends State<LoginScreen> {
               fit: BoxFit.cover,
             ),
           ),
-          Container(
-            color: Colors.black.withOpacity(0.5),
-          ),
+          Container(color: Colors.black.withOpacity(0.5)),
           Padding(
             padding: const EdgeInsets.all(16.0),
             child: Column(
@@ -99,13 +103,11 @@ class _LoginScreenState extends State<LoginScreen> {
                   style: const TextStyle(color: Colors.white),
                   decoration: InputDecoration(
                     labelText: 'Kullanıcı Adı',
-                    labelStyle: TextStyle(
-                      color: Colors.white,
-                      fontSize: 16,
-                    ),
-                    border: OutlineInputBorder(),
-                    contentPadding:
-                        EdgeInsets.symmetric(vertical: 12, horizontal: 10),
+                    labelStyle:
+                        const TextStyle(color: Colors.white, fontSize: 16),
+                    border: const OutlineInputBorder(),
+                    contentPadding: const EdgeInsets.symmetric(
+                        vertical: 12, horizontal: 10),
                   ),
                 ),
                 const SizedBox(height: 20),
@@ -115,22 +117,20 @@ class _LoginScreenState extends State<LoginScreen> {
                   style: const TextStyle(color: Colors.white),
                   decoration: InputDecoration(
                     labelText: 'Şifre',
-                    labelStyle: TextStyle(
-                      color: Colors.white,
-                      fontSize: 16,
-                    ),
-                    border: OutlineInputBorder(),
-                    contentPadding:
-                        EdgeInsets.symmetric(vertical: 12, horizontal: 10),
+                    labelStyle:
+                        const TextStyle(color: Colors.white, fontSize: 16),
+                    border: const OutlineInputBorder(),
+                    contentPadding: const EdgeInsets.symmetric(
+                        vertical: 12, horizontal: 10),
                   ),
                 ),
                 const SizedBox(height: 20),
                 ElevatedButton(
                   onPressed: _signIn,
                   style: ElevatedButton.styleFrom(
-                    minimumSize: Size(double.infinity, 50),
+                    minimumSize: const Size(double.infinity, 50),
                     foregroundColor: Colors.black,
-                    backgroundColor: Colors.blueAccent,
+                    backgroundColor: Colors.blueGrey.withOpacity(0.7),
                     shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12)),
                   ),
@@ -148,7 +148,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   },
                   child: const Text(
                     'Hesabın yok mu? Kayıt Ol',
-                    style: TextStyle(fontSize: 16, color: Colors.blueAccent),
+                    style: TextStyle(fontSize: 16, color: Colors.blueGrey),
                   ),
                 ),
               ],

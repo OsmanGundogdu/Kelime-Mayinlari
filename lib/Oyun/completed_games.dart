@@ -10,22 +10,19 @@ class CompletedGamesScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Biten Oyunlar'),
-        backgroundColor: Colors.blueAccent,
+        backgroundColor: Colors.red,
       ),
       body: Stack(
         children: [
-          // Arka plan resmi
           Positioned.fill(
             child: Image.asset(
               'assets/images/completed_games_bg.png',
               fit: BoxFit.cover,
             ),
           ),
-
           Container(
             color: Colors.black.withOpacity(0.3),
           ),
-
           Padding(
             padding: const EdgeInsets.all(24.0),
             child: ListView.builder(
@@ -69,7 +66,6 @@ class CompletedGamesScreen extends StatelessWidget {
     );
   }
 
-  // Oyun sonucunu gösteren fonksiyon
   Widget _buildGameResult(Game game) {
     if (game.userScore > game.opponentScore) {
       return const Text(
@@ -89,7 +85,6 @@ class CompletedGamesScreen extends StatelessWidget {
     }
   }
 
-  // Tamamlanan oyunun detayları
   void _openGameDetails(BuildContext context, Game game) {
     Navigator.push(
       context,
@@ -148,7 +143,6 @@ class GameDetailScreen extends StatelessWidget {
     );
   }
 
-  // Oyun sonucu
   Widget _buildGameResult(Game game) {
     if (game.userScore > game.opponentScore) {
       return const Text(
@@ -169,7 +163,6 @@ class GameDetailScreen extends StatelessWidget {
   }
 }
 
-// Oyun modeli
 class Game {
   final String opponentName;
   final int userScore;

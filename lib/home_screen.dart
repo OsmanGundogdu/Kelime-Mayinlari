@@ -1,15 +1,17 @@
 import 'package:flutter/material.dart';
-import 'package:proje2/Oyun/active_games_screen.dart';
+import 'package:proje2/Giris/login_screen.dart';
 import 'package:proje2/Oyun/completed_games.dart';
 import 'package:proje2/Oyun/new_game_screen.dart';
 
 class HomeScreen extends StatelessWidget {
+  final String userId;
   final String username;
   final int gamesPlayed;
   final int gamesWon;
 
   const HomeScreen({
     super.key,
+    required this.userId,
     required this.username,
     required this.gamesPlayed,
     required this.gamesWon,
@@ -22,16 +24,19 @@ class HomeScreen extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('Merhaba, $username 👋'),
-        backgroundColor: Colors.orangeAccent,
+        title: Text(
+          'Merhaba, $username 👋',
+          style: TextStyle(color: Colors.white),
+        ),
+        backgroundColor: Colors.brown,
         actions: [
           IconButton(
-            icon: const Icon(
-              Icons.logout,
-              color: Colors.black,
-            ),
+            icon: const Icon(Icons.logout, color: Colors.white),
             tooltip: 'Çıkış Yap',
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.pushAndRemoveUntil(
+                context,
+                MaterialPageRoute(builder: (context) => const LoginScreen()),
+                (route) => false),
           ),
         ],
       ),
@@ -43,9 +48,7 @@ class HomeScreen extends StatelessWidget {
               fit: BoxFit.cover,
             ),
           ),
-          Container(
-            color: Colors.black.withOpacity(0.3),
-          ),
+          Container(color: Colors.black.withOpacity(0.3)),
           Padding(
             padding: const EdgeInsets.all(24.0),
             child: Column(
@@ -96,7 +99,10 @@ class HomeScreen extends StatelessWidget {
                               Navigator.push(
                                 context,
                                 MaterialPageRoute(
-                                  builder: (context) => const NewGameScreen(),
+                                  builder: (context) => NewGameScreen(
+                                    currentUserId: userId,
+                                    currentUsername: username,
+                                  ),
                                 ),
                               );
                             },
@@ -107,13 +113,13 @@ class HomeScreen extends StatelessWidget {
                             label: 'Aktif\nOyunlar',
                             icon: Icons.play_circle_fill,
                             onPressed: () {
-                              Navigator.push(
+                              Navigator.pushNamed(
                                 context,
-                                MaterialPageRoute(
-                                  builder: (context) => const ActiveGamesScreen(
-                                    activeGames: [],
-                                  ),
-                                ),
+                                '/activeGames',
+                                arguments: {
+                                  'userId': userId,
+                                  'username': username,
+                                },
                               );
                             },
                           ),
@@ -129,7 +135,7 @@ class HomeScreen extends StatelessWidget {
                             context,
                             MaterialPageRoute(
                               builder: (context) => const CompletedGamesScreen(
-                                completedGames: [],
+                                completedGames: [], // TODO: Buraya Firestore'dan gelen bitmiş oyunlar eklenecek
                               ),
                             ),
                           );

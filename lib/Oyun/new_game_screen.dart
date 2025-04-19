@@ -1,151 +1,156 @@
-import 'dart:math';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
-class NewGameScreen extends StatelessWidget {
-  const NewGameScreen({super.key});
+class NewGameScreen extends StatefulWidget {
+  final String currentUserId;
+  final String currentUsername;
+
+  const NewGameScreen({
+    super.key,
+    required this.currentUserId,
+    required this.currentUsername,
+  });
+
+  @override
+  State<NewGameScreen> createState() => _NewGameScreenState();
+}
+
+class _NewGameScreenState extends State<NewGameScreen> {
+  int? selectedDuration;
+
+  final List<int> durations = [2, 5, 720, 1440];
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Yeni Oyun'),
-        backgroundColor: Colors.blueAccent,
-      ),
-      body: Stack(
-        children: [
-          Positioned.fill(
-            child: Image.asset(
-              'assets/images/new_game_bg.png',
-              fit: BoxFit.cover,
-            ),
+        appBar: AppBar(
+          title: const Text(
+            "Yeni Oyun Başlat",
+            style: TextStyle(color: Colors.white),
           ),
-          Container(
-            color: Colors.black.withOpacity(0.3),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(24.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Oyun Süresi Seçin',
-                  style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
-                ),
-                const SizedBox(height: 20),
-                _buildGameOption(
-                  context,
-                  'Hızlı Oyun - 2 Dakika',
-                  '2 dakika içinde kelimeyi yazmalısınız.',
-                  2,
-                ),
-                _buildGameOption(
-                  context,
-                  'Hızlı Oyun - 5 Dakika',
-                  '5 dakika içinde kelimeyi yazmalısınız.',
-                  5,
-                ),
-                const SizedBox(height: 20),
-                _buildGameOption(
-                  context,
-                  'Genişletilmiş Oyun - 12 Saat',
-                  '12 saat içinde kelimeyi yazmalısınız.',
-                  720,
-                ),
-                _buildGameOption(
-                  context,
-                  'Genişletilmiş Oyun - 24 Saat',
-                  '24 saat içinde kelimeyi yazmalısınız.',
-                  1440,
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildGameOption(
-      BuildContext context, String title, String description, int duration) {
-    return Card(
-      elevation: 5,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              title,
-              style: const TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: Colors.black,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              description,
-              style: const TextStyle(
-                fontSize: 14,
-                color: Colors.black54,
-              ),
-            ),
-            const SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: () {
-                // Rastgele kullanıcı eşleştirme ve oyun başlatma
-                _startGame(context, duration);
-              },
-              child: const Text('Başlat'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.blueAccent,
-                minimumSize: const Size(double.infinity, 45),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-            ),
-          ],
+          backgroundColor: Colors.blueGrey,
         ),
-      ),
-    );
-  }
+        body: Stack(
+          children: [
+            Positioned.fill(
+              child: Image.asset(
+                'assets/images/new_game_bg.png',
+                fit: BoxFit.cover,
+              ),
+            ),
+            Container(
+              color: Colors.black.withOpacity(0.3),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(24.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const Text(
+                    "Oyun Süresi Seçin:",
+                    style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white),
+                  ),
+                  const SizedBox(height: 20),
+                  ...durations.map((duration) {
+                    String label;
+                    if (duration < 60) {
+                      label = "$duration Dakika";
+                    } else {
+                      label = "${(duration / 60).toInt()} Saat";
+                    }
 
-  void _startGame(BuildContext context, int duration) {
-    // Burada kullanıcıları eşleştiriyoruz, şu an rastgele iki kullanıcı seçiyoruz.
-    // Bu kısımları firebase database den çekeceğiz.
-    List<String> users = [
-      'Kullanıcı 1',
-      'Kullanıcı 2'
-    ]; // Rastgele kullanıcı listesi
-    Random random = Random();
-    String selectedUser1 = users[random.nextInt(users.length)];
-    String selectedUser2 = users[random.nextInt(users.length)];
-
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('Oyun Başladı!'),
-          content: Text(
-            '$selectedUser1 ve $selectedUser2, $duration dakika süresiyle eşleşti!',
-          ),
-          actions: <Widget>[
-            TextButton(
-              child: const Text('Tamam'),
-              onPressed: () {
-                Navigator.of(context).pop();
-                // Oyun başladığında bir sonraki sayfaya yönlendirme yapacaz.
-              },
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      child: ElevatedButton(
+                        onPressed: () {
+                          setState(() {
+                            selectedDuration = duration;
+                          });
+                          _findOrCreateGame(context, duration);
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.blueGrey.withOpacity(0.8),
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: Text(
+                          label,
+                          style: const TextStyle(
+                            fontSize: 18,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    );
+                  }),
+                  const SizedBox(height: 40),
+                  const Text(
+                    "Eşleşmek için aynı süreyi seçen başka bir oyuncu gerekli.",
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                        color: Colors.white, fontWeight: FontWeight.bold),
+                  ),
+                ],
+              ),
             ),
           ],
-        );
-      },
-    );
+        ));
+  }
+
+  Future<void> _findOrCreateGame(
+      BuildContext context, int selectedDuration) async {
+    final gamesRef = FirebaseFirestore.instance.collection('games');
+
+    final querySnapshot = await gamesRef
+        .where('isGameStarted', isEqualTo: false)
+        .where('duration', isEqualTo: selectedDuration)
+        .get();
+
+    final openGames =
+        querySnapshot.docs.where((doc) => doc['guestUserID'] == null).toList();
+
+    if (openGames.isNotEmpty) {
+      final matchedGame = openGames.first;
+
+      await matchedGame.reference.update({
+        'guestUserID': widget.currentUserId,
+        'guestUsername': widget.currentUsername,
+        'isGameStarted': true,
+        'scores.${widget.currentUserId}': 0,
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Rakiple eşleştirildiniz!')),
+      );
+
+      Navigator.pop(context);
+    } else {
+      final newDocRef = gamesRef.doc();
+
+      await newDocRef.set({
+        'hostUserID': widget.currentUserId,
+        'hostUsername': widget.currentUsername,
+        'guestUserID': null,
+        'guestUsername': null,
+        'isGameStarted': false,
+        'turn': 'host',
+        'scores': {
+          widget.currentUserId: 0,
+        },
+        'duration': selectedDuration,
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Oyun oluşturuldu. Rakip bekleniyor...')),
+      );
+
+      Navigator.pop(context);
+    }
   }
 }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:proje2/Giris/login_screen.dart';
+import 'package:proje2/Oyun/active_games_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -14,6 +15,9 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      routes: {
+        '/activeGames': (context) => const ActiveGamesScreen(),
+      },
       debugShowCheckedModeBanner: false,
       title: 'Kullanıcı Giriş/Kayıt',
       theme: ThemeData(primarySwatch: Colors.blue),
