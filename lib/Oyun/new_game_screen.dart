@@ -23,83 +23,108 @@ class _NewGameScreenState extends State<NewGameScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-        appBar: AppBar(
-          title: const Text(
-            "Yeni Oyun Başlat",
-            style: TextStyle(color: Colors.white),
-          ),
-          backgroundColor: Colors.blueGrey,
+      appBar: AppBar(
+        title: const Text(
+          "Yeni Oyun Başlat",
+          style: TextStyle(color: Colors.white),
         ),
-        body: Stack(
-          children: [
-            Positioned.fill(
-              child: Image.asset(
-                'assets/images/new_game_bg.png',
-                fit: BoxFit.cover,
-              ),
+        backgroundColor: Colors.blueGrey,
+      ),
+      body: Stack(
+        children: [
+          Positioned.fill(
+            child: Image.asset(
+              'assets/images/new_game_bg.png',
+              fit: BoxFit.cover,
             ),
-            Container(
-              color: Colors.black.withOpacity(0.3),
-            ),
-            Padding(
+          ),
+          Container(
+            color: Colors.black.withOpacity(0.3),
+          ),
+          Center(
+            child: SingleChildScrollView(
               padding: const EdgeInsets.all(24.0),
               child: Column(
+                mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   const Text(
                     "Oyun Süresi Seçin:",
+                    textAlign: TextAlign.center,
                     style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white),
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
                   ),
-                  const SizedBox(height: 20),
-                  ...durations.map((duration) {
-                    String label;
-                    if (duration < 60) {
-                      label = "$duration Dakika";
-                    } else {
-                      label = "${(duration / 60).toInt()} Saat";
-                    }
-
-                    return Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 8),
-                      child: ElevatedButton(
-                        onPressed: () {
-                          setState(() {
-                            selectedDuration = duration;
-                          });
-                          _findOrCreateGame(context, duration);
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.blueGrey.withOpacity(0.8),
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
-                        child: Text(
-                          label,
-                          style: const TextStyle(
-                            fontSize: 18,
-                            color: Colors.white,
-                          ),
-                        ),
-                      ),
-                    );
-                  }),
-                  const SizedBox(height: 40),
+                  const SizedBox(height: 70),
+                  const Text(
+                    "Hızlı Oyun",
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.amberAccent,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  ...durations.where((d) => d < 60).map(_buildDurationButton),
+                  const SizedBox(height: 80),
+                  const Text(
+                    "Genişletilmiş Oyun",
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.lightGreenAccent,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  ...durations.where((d) => d >= 60).map(_buildDurationButton),
+                  const SizedBox(height: 130),
                   const Text(
                     "Eşleşmek için aynı süreyi seçen başka bir oyuncu gerekli.",
                     textAlign: TextAlign.center,
                     style: TextStyle(
-                        color: Colors.white, fontWeight: FontWeight.bold),
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ],
               ),
             ),
-          ],
-        ));
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDurationButton(int duration) {
+    String label =
+        duration < 60 ? "$duration Dakika" : "${(duration / 60).toInt()} Saat";
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: ElevatedButton(
+        onPressed: () {
+          setState(() {
+            selectedDuration = duration;
+          });
+          _findOrCreateGame(context, duration);
+        },
+        style: ElevatedButton.styleFrom(
+          backgroundColor: Colors.blueGrey.withOpacity(0.8),
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+        child: Text(
+          label,
+          style: const TextStyle(fontSize: 18, color: Colors.white),
+        ),
+      ),
+    );
   }
 
   Future<void> _findOrCreateGame(
