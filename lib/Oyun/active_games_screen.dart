@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:proje2/game_screen.dart';
 
 // Oyun modeli
 class Game {
@@ -211,7 +212,12 @@ class GameDetailScreen extends StatelessWidget {
                   const SizedBox(height: 400),
                   ElevatedButton(
                     onPressed: () {
-                      // Oyuna devam etme işlemi burada yapılacak
+                      Navigator.pushAndRemoveUntil(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => GameScreen(),
+                          ),
+                          (route) => false);
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.lightBlueAccent.withOpacity(0.7),
