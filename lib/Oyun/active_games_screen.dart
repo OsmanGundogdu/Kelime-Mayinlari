@@ -215,7 +215,12 @@ class GameDetailScreen extends StatelessWidget {
                       Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (context) => GameScreen(),
+                            builder: (context) => GameScreen(
+                              gameId: doc.id,
+                              currentUserId: userId,
+                              isHost:
+                                  userId == doc['hostUserID'] ? true : false,
+                            ),
                           ));
                     },
                     style: ElevatedButton.styleFrom(

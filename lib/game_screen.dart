@@ -1,4 +1,6 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:proje2/game_manager.dart';
 
 enum TileType {
   normal,
@@ -286,8 +288,61 @@ class GameBoard {
   ];
 }
 
-class GameScreen extends StatelessWidget {
-  const GameScreen({super.key});
+class GameScreen extends StatefulWidget {
+  final String gameId;
+  final String currentUserId;
+  final bool isHost;
+
+  const GameScreen({
+    super.key,
+    required this.gameId,
+    required this.currentUserId,
+    required this.isHost,
+  });
+
+  @override
+  State<GameScreen> createState() => _GameScreenState();
+}
+
+class _GameScreenState extends State<GameScreen> {
+  final GameManager _gameManager = GameManager();
+  List<Map<String, dynamic>> _playerLetters = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _drawInitialLetters();
+  }
+
+  void _drawInitialLetters() async {
+    final String gameId = widget.gameId;
+    final String currentUserId = widget.currentUserId;
+    final bool isHost = widget.isHost;
+
+    final gameDoc = FirebaseFirestore.instance.collection('games').doc(gameId);
+
+    final snapshot = await gameDoc.get();
+
+    if (snapshot.exists) {
+      final data = snapshot.data()!;
+      final key = isHost ? 'hostLetters' : 'guestLetters';
+
+      if (data.containsKey(key)) {
+        final List<dynamic> savedLetters = data[key];
+        setState(() {
+          _playerLetters = List<Map<String, dynamic>>.from(savedLetters);
+        });
+      } else {
+        final drawn = _gameManager.drawLetters(7);
+
+        await gameDoc.update({key: drawn});
+
+        setState(() {
+          _playerLetters = drawn;
+        });
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -359,20 +414,12 @@ class GameScreen extends StatelessWidget {
               ),
             ),
             BottomPanel(
-              letters: const [
-                {'char': 'E', 'point': 1},
-                {'char': 'N', 'point': 1},
-                {'char': 'O', 'point': 2},
-                {'char': 'T', 'point': 1},
-                {'char': 'N', 'point': 1},
-                {'char': 'R', 'point': 1},
-                {'char': 'A', 'point': 1},
-              ],
+              letters: _playerLetters,
               myUsername: "Sen",
               myScore: 25,
               opponentUsername: "Atakan",
               opponentScore: 17,
-              remainingLetters: 86,
+              remainingLetters: _gameManager.remainingLetterCount,
             ),
           ],
         ),

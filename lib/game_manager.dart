@@ -69,5 +69,5 @@ class GameManager {
     opponentLetters.addAll(drawLetters(7));
   }
 
-  int get remainingLetters => _letterPool.length;
+  int get remainingLetterCount => _letterPool.length;
 }
