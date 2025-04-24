@@ -292,11 +292,38 @@ class GameScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: AppBar(
+        backgroundColor: Colors.blue.shade900.withOpacity(0.9),
+        title: const Text(
+          "KELİME MAYINLARI",
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: 20,
+            color: Colors.white,
+          ),
+        ),
+        centerTitle: true,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          onPressed: () {
+            Navigator.of(context).pop();
+          },
+        ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.settings, color: Colors.white),
+            onPressed: () {
+              // TODO: Ayarlar ekranına yönlendir
+            },
+          )
+        ],
+        elevation: 4,
+      ),
       backgroundColor: Colors.blue.shade900.withOpacity(0.8),
       body: SafeArea(
         child: Column(
           children: [
-            const SizedBox(height: 50),
+            const SizedBox(height: 20),
             Expanded(
               flex: 7,
               child: Padding(
@@ -356,17 +383,17 @@ class GameScreen extends StatelessWidget {
   Color _getTileColor(TileType type) {
     switch (type) {
       case TileType.doubleLetter:
-        return Colors.lightBlue.shade300.withOpacity(0.8);
+        return Colors.lightBlue.shade300;
       case TileType.tripleLetter:
-        return const Color.fromARGB(255, 197, 133, 49).withOpacity(0.8);
+        return const Color.fromARGB(255, 197, 133, 49);
       case TileType.doubleWord:
-        return Colors.green.shade300.withOpacity(0.8);
+        return Colors.green.shade300;
       case TileType.tripleWord:
-        return Colors.brown.shade300.withOpacity(0.8);
+        return Colors.brown.shade300;
       case TileType.start:
-        return Colors.orange.shade300.withOpacity(0.8);
+        return Colors.orange.shade300;
       default:
-        return Colors.white.withOpacity(0.8);
+        return Colors.white;
     }
   }
 
@@ -402,6 +429,13 @@ class GameScreen extends StatelessWidget {
         return const SizedBox.shrink();
     }
   }
+}
+
+class LetterTile {
+  final String char;
+  final int point;
+
+  LetterTile(this.char, this.point);
 }
 
 class BottomPanel extends StatelessWidget {
@@ -481,7 +515,7 @@ class BottomPanel extends StatelessWidget {
               );
             }).toList(),
           ),
-          const SizedBox(height: 60),
+          const SizedBox(height: 50),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [

@@ -212,12 +212,11 @@ class GameDetailScreen extends StatelessWidget {
                   const SizedBox(height: 400),
                   ElevatedButton(
                     onPressed: () {
-                      Navigator.pushAndRemoveUntil(
+                      Navigator.push(
                           context,
                           MaterialPageRoute(
                             builder: (context) => GameScreen(),
-                          ),
-                          (route) => false);
+                          ));
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.lightBlueAccent.withOpacity(0.7),
