@@ -1,6 +1,10 @@
 import 'dart:math';
 
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 class GameManager {
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+
   final Map<String, Map<String, dynamic>> _letterData = {
     'A': {'count': 12, 'point': 1},
     'B': {'count': 2, 'point': 3},
@@ -34,39 +38,53 @@ class GameManager {
     '*': {'count': 2, 'point': 0},
   };
 
-  final List<Map<String, dynamic>> _letterPool = [];
-  final List<Map<String, dynamic>> playerLetters = [];
-  final List<Map<String, dynamic>> opponentLetters = [];
+  List<Map<String, dynamic>> _letterPool = [];
 
-  GameManager() {
-    _generateLetterPool();
-    _shufflePool();
-  }
-
-  void _generateLetterPool() {
+  // Havuzu Firestore’a yaz (bir kere)
+  Future<void> generateAndSaveLetterPool(String gameId) async {
+    List<Map<String, dynamic>> pool = [];
     _letterData.forEach((char, data) {
       int count = data['count'];
       int point = data['point'];
       for (int i = 0; i < count; i++) {
-        _letterPool.add({'char': char, 'point': point});
+        pool.add({'char': char, 'point': point});
       }
     });
+    pool.shuffle(Random());
+
+    await _firestore.collection('games').doc(gameId).set(
+      {'letterPool': pool},
+      SetOptions(merge: true),
+    );
   }
 
-  void _shufflePool() {
-    _letterPool.shuffle(Random());
+  // Firestore'dan havuzu çek
+  Future<void> loadLetterPool(String gameId) async {
+    final snapshot = await _firestore.collection('games').doc(gameId).get();
+
+    if (snapshot.exists && snapshot.data()!.containsKey('letterPool')) {
+      _letterPool = List<Map<String, dynamic>>.from(snapshot['letterPool']);
+    }
   }
 
-  List<Map<String, dynamic>> drawLetters(int count) {
-    int drawCount = count.clamp(0, _letterPool.length);
-    final drawn = _letterPool.sublist(0, drawCount);
-    _letterPool.removeRange(0, drawCount);
+  // Firestore'dan 7 harf çek ve güncelle
+  Future<List<Map<String, dynamic>>> drawLettersFromPool(
+      String gameId, int count) async {
+    final docRef = _firestore.collection('games').doc(gameId);
+    final doc = await docRef.get();
+
+    if (!doc.exists || !doc.data()!.containsKey('letterPool')) return [];
+
+    List<Map<String, dynamic>> pool =
+        List<Map<String, dynamic>>.from(doc['letterPool']);
+
+    int drawCount = count.clamp(0, pool.length);
+    final drawn = pool.sublist(0, drawCount);
+    pool.removeRange(0, drawCount);
+
+    await docRef.update({'letterPool': pool});
+    _letterPool = pool;
     return drawn;
-  }
-
-  void dealInitialLetters() {
-    playerLetters.addAll(drawLetters(7));
-    opponentLetters.addAll(drawLetters(7));
   }
 
   int get remainingLetterCount => _letterPool.length;

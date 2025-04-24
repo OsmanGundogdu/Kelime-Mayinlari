@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:proje2/game_manager.dart';
@@ -307,34 +309,48 @@ class GameScreen extends StatefulWidget {
 class _GameScreenState extends State<GameScreen> {
   final GameManager _gameManager = GameManager();
   List<Map<String, dynamic>> _playerLetters = [];
+  int? guestScore;
+  int? hostScore;
+  String? hostUsername;
+  String? guestUsername;
 
   @override
   void initState() {
     super.initState();
     _drawInitialLetters();
+    fetchGameData();
   }
 
   void _drawInitialLetters() async {
     final String gameId = widget.gameId;
     final String currentUserId = widget.currentUserId;
     final bool isHost = widget.isHost;
-
     final gameDoc = FirebaseFirestore.instance.collection('games').doc(gameId);
-
     final snapshot = await gameDoc.get();
+
+    final key = isHost ? 'hostLetters' : 'guestLetters';
 
     if (snapshot.exists) {
       final data = snapshot.data()!;
-      final key = isHost ? 'hostLetters' : 'guestLetters';
+      if (!data.containsKey('letterPool')) {
+        await _gameManager.generateAndSaveLetterPool(gameId);
+      }
 
       if (data.containsKey(key)) {
-        final List<dynamic> savedLetters = data[key];
+        final List<dynamic> savedLetters = data[key] is String
+            ? List<Map<String, dynamic>>.from((data[key] as String).isNotEmpty
+                ? List<Map<String, dynamic>>.from(
+                    (data[key] as String).isNotEmpty
+                        ? jsonDecode(data[key])
+                        : [])
+                : [])
+            : List<Map<String, dynamic>>.from(data[key]);
         setState(() {
           _playerLetters = List<Map<String, dynamic>>.from(savedLetters);
         });
       } else {
-        final drawn = _gameManager.drawLetters(7);
-
+        await _gameManager.loadLetterPool(gameId);
+        final drawn = await _gameManager.drawLettersFromPool(gameId, 7);
         await gameDoc.update({key: drawn});
 
         setState(() {
@@ -346,6 +362,9 @@ class _GameScreenState extends State<GameScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (hostUsername == null || guestUsername == null) {
+      return const Center(child: CircularProgressIndicator());
+    }
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.blue.shade900.withOpacity(0.9),
@@ -415,16 +434,40 @@ class _GameScreenState extends State<GameScreen> {
             ),
             BottomPanel(
               letters: _playerLetters,
-              myUsername: "Sen",
-              myScore: 25,
-              opponentUsername: "Atakan",
-              opponentScore: 17,
+              myUsername: hostUsername!,
+              myScore: hostScore ?? 0,
+              opponentUsername: guestUsername!,
+              opponentScore: guestScore ?? 0,
               remainingLetters: _gameManager.remainingLetterCount,
             ),
           ],
         ),
       ),
     );
+  }
+
+  Future<void> fetchGameData() async {
+    try {
+      var doc = await FirebaseFirestore.instance
+          .collection('games')
+          .doc(widget.gameId)
+          .get();
+
+      var data = doc.data();
+
+      if (data != null) {
+        setState(() {
+          hostUsername = data['hostUsername'];
+          guestUsername = data['guestUsername'];
+          hostScore =
+              int.tryParse(data['scores']['hostUserID'].toString()) ?? 0;
+          guestScore =
+              int.tryParse(data['scores']['guestUserID'].toString()) ?? 0;
+        });
+      }
+    } catch (e) {
+      print("Veri çekme hatası: $e");
+    }
   }
 
   Color _getTileColor(TileType type) {
