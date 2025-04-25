@@ -1,6 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
-import 'package:proje2/game_screen.dart';
+import 'package:proje2/Oyun%20Ekrani/game_screen.dart';
 
 // Oyun modeli
 class Game {

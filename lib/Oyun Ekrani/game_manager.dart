@@ -92,4 +92,55 @@ class GameManager {
     }
     return 0;
   }
+
+  Future<void> submitWord({
+    required String gameId,
+    required String userId,
+    required List<Map<String, dynamic>> placedTiles,
+    required bool isHost,
+  }) async {
+    final docRef = _firestore.collection('games').doc(gameId);
+    final doc = await docRef.get();
+
+    if (!doc.exists) return;
+
+    final data = doc.data()!;
+    final boardState = List<List<String>>.from(
+      data['boardState'] ??
+          List.generate(15, (_) => List.generate(15, (_) => '')),
+    );
+
+    final playerLettersKey = isHost ? 'hostLetters' : 'guestLetters';
+
+    for (var tile in placedTiles) {
+      int row = tile['row'];
+      int col = tile['col'];
+      String letter = tile['letter'];
+      boardState[row][col] = letter;
+    }
+
+    List<Map<String, dynamic>> currentLetters =
+        List<Map<String, dynamic>>.from(data[playerLettersKey] ?? []);
+
+    for (var tile in placedTiles) {
+      final index =
+          currentLetters.indexWhere((l) => l['char'] == tile['letter']);
+      if (index != -1) {
+        currentLetters.removeAt(index);
+      }
+    }
+
+    int needed = 7 - currentLetters.length;
+    List<Map<String, dynamic>> newLetters =
+        await drawLettersFromPool(gameId, needed);
+    currentLetters.addAll(newLetters);
+
+    final nextTurn = isHost ? data['guestUserID'] : data['hostUserID'];
+
+    await docRef.update({
+      'boardState': boardState,
+      playerLettersKey: currentLetters,
+      'currentTurn': nextTurn,
+    });
+  }
 }
