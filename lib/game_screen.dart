@@ -365,6 +365,7 @@ class _GameScreenState extends State<GameScreen> {
     if (hostUsername == null || guestUsername == null) {
       return const Center(child: CircularProgressIndicator());
     }
+
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.blue.shade900.withOpacity(0.9),
@@ -422,7 +423,8 @@ class _GameScreenState extends State<GameScreen> {
                         decoration: BoxDecoration(
                           color: _getTileColor(type),
                           border: Border.all(
-                              color: Colors.grey.shade700.withOpacity(0.8)),
+                            color: Colors.grey.shade700.withOpacity(0.8),
+                          ),
                           borderRadius: BorderRadius.circular(6),
                         ),
                         child: Center(child: _getTileLabel(type)),
@@ -432,13 +434,26 @@ class _GameScreenState extends State<GameScreen> {
                 ),
               ),
             ),
-            BottomPanel(
-              letters: _playerLetters,
-              myUsername: hostUsername!,
-              myScore: hostScore ?? 0,
-              opponentUsername: guestUsername!,
-              opponentScore: guestScore ?? 0,
-              remainingLetters: _gameManager.remainingLetterCount,
+            FutureBuilder<int>(
+              future: _gameManager.getRemainingLetterCount(widget.gameId),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const CircularProgressIndicator();
+                } else if (snapshot.hasError) {
+                  return const Text('Hata: kalan harf yüklenemedi');
+                }
+
+                int remaining = snapshot.data ?? 0;
+
+                return BottomPanel(
+                  letters: _playerLetters,
+                  myUsername: hostUsername!,
+                  myScore: hostScore ?? 0,
+                  opponentUsername: guestUsername!,
+                  opponentScore: guestScore ?? 0,
+                  remainingLetters: remaining,
+                );
+              },
             ),
           ],
         ),
@@ -565,7 +580,7 @@ class BottomPanel extends StatelessWidget {
                   style: const TextStyle(color: Colors.black),
                 ),
               ),
-              Text('$opponentScore: $opponentUsername',
+              Text('$opponentScore :$opponentUsername',
                   style: const TextStyle(color: Colors.white, fontSize: 16)),
             ],
           ),

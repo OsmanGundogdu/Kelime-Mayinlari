@@ -1,5 +1,4 @@
 import 'dart:math';
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class GameManager {
@@ -40,7 +39,6 @@ class GameManager {
 
   List<Map<String, dynamic>> _letterPool = [];
 
-  // Havuzu Firestore’a yaz (bir kere)
   Future<void> generateAndSaveLetterPool(String gameId) async {
     List<Map<String, dynamic>> pool = [];
     _letterData.forEach((char, data) {
@@ -58,7 +56,6 @@ class GameManager {
     );
   }
 
-  // Firestore'dan havuzu çek
   Future<void> loadLetterPool(String gameId) async {
     final snapshot = await _firestore.collection('games').doc(gameId).get();
 
@@ -67,7 +64,6 @@ class GameManager {
     }
   }
 
-  // Firestore'dan 7 harf çek ve güncelle
   Future<List<Map<String, dynamic>>> drawLettersFromPool(
       String gameId, int count) async {
     final docRef = _firestore.collection('games').doc(gameId);
@@ -87,5 +83,13 @@ class GameManager {
     return drawn;
   }
 
-  int get remainingLetterCount => _letterPool.length;
+  Future<int> getRemainingLetterCount(String gameId) async {
+    final snapshot = await _firestore.collection('games').doc(gameId).get();
+
+    if (snapshot.exists && snapshot.data()!.containsKey('letterPool')) {
+      List<dynamic> pool = snapshot['letterPool'];
+      return pool.length;
+    }
+    return 0;
+  }
 }
