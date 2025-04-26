@@ -253,21 +253,16 @@ class _GameScreenState extends State<GameScreen> {
                           return;
                         }
 
-                        await _gameManager.submitWord(
-                          gameId: widget.gameId,
-                          userId: widget.currentUserId,
-                          placedTiles: placedLetters,
-                          isHost: widget.isHost,
-                        );
+                        await updatePlacedLetters(placedLetters);
 
+                        final letterKey =
+                            widget.isHost ? 'hostLetters' : 'guestLetters';
                         final newLetters =
                             await _gameManager.drawLettersFromPool(
                           widget.gameId,
                           placedLetters.length,
                         );
 
-                        final letterKey =
-                            widget.isHost ? 'hostLetters' : 'guestLetters';
                         await FirebaseFirestore.instance
                             .collection('games')
                             .doc(widget.gameId)
@@ -294,7 +289,7 @@ class _GameScreenState extends State<GameScreen> {
                       }
                     });
               },
-            ),
+            )
           ],
         ),
       ),
@@ -318,28 +313,64 @@ class _GameScreenState extends State<GameScreen> {
         'row': row,
         'col': col,
       };
-      _selectedLetterChar = '';
     });
 
-    _savePlacedLetterToFirestore(row, col, _selectedLetterChar!);
+    _savePlacedLetterToFirestore();
   }
 
-  Future<void> _savePlacedLetterToFirestore(
-      int row, int col, String letter) async {
+  Future<void> _savePlacedLetterToFirestore() async {
     try {
       final docRef =
           FirebaseFirestore.instance.collection('games').doc(widget.gameId);
-      final placedKey = '$row-$col';
+      final List<Map<String, dynamic>> placedLetters = [];
 
-      await docRef.set({
-        'placedLetters.$placedKey': {
-          'letter': letter,
-          'row': row,
-          'col': col,
-        }
-      }, SetOptions(merge: true));
+      placedTiles.forEach((key, value) {
+        placedLetters.add(value);
+      });
+
+      await docRef.update({
+        'placedLetters': placedLetters,
+      });
+
+      print("Harfler Firestore'a kaydedildi.");
     } catch (e) {
       print('Harf Firestore\'a kaydedilemedi: $e');
+    }
+  }
+
+  Future<void> startNewGame() async {
+    final gameDoc =
+        FirebaseFirestore.instance.collection('games').doc(widget.gameId);
+    final docSnapshot = await gameDoc.get();
+
+    if (!docSnapshot.exists) {
+      await gameDoc.set({
+        'placedLetters': [],
+        'turn': 'host',
+        'isFirstMove': true,
+      });
+    } else {
+      final data = docSnapshot.data();
+      if (data != null && !data.containsKey('placedLetters')) {
+        await gameDoc.update({
+          'placedLetters': [],
+        });
+      }
+    }
+  }
+
+  Future<void> updatePlacedLetters(
+      List<Map<String, dynamic>> placedLetters) async {
+    try {
+      final gameDoc =
+          FirebaseFirestore.instance.collection('games').doc(widget.gameId);
+
+      await gameDoc.update({
+        'placedLetters': placedLetters,
+        'turn': widget.isHost ? 'guest' : 'host',
+      });
+    } catch (e) {
+      print("Harfler güncellenirken hata: $e");
     }
   }
 
