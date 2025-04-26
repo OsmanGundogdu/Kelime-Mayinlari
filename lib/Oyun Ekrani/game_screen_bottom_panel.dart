@@ -7,7 +7,7 @@ class BottomPanel extends StatelessWidget {
   final String opponentUsername;
   final int opponentScore;
   final int remainingLetters;
-  final String selectedLetterChar; // Seçilen harf
+  final String selectedLetterChar;
   final Function(Map<String, dynamic>) onLetterTap;
   final VoidCallback onSubmitPressed;
 

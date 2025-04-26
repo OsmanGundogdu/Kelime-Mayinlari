@@ -31,7 +31,7 @@ class _GameScreenState extends State<GameScreen> {
 
   Map<String, dynamic> placedTiles = {};
   Map<String, dynamic>? _selectedLetter;
-  String? _selectedLetterChar; // Define the variable
+  String _selectedLetterChar = '';
 
   @override
   void initState() {
@@ -177,27 +177,26 @@ class _GameScreenState extends State<GameScreen> {
                 child: AspectRatio(
                   aspectRatio: 1,
                   child: GridView.builder(
-                    physics: const NeverScrollableScrollPhysics(),
-                    gridDelegate:
-                        const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: GameBoard.boardSize,
-                      childAspectRatio: 1,
-                    ),
-                    itemCount: GameBoard.boardSize * GameBoard.boardSize,
-                    itemBuilder: (context, index) {
-                      int row = index ~/ GameBoard.boardSize;
-                      int col = index % GameBoard.boardSize;
-                      TileType type = GameBoard.boardLayout[row][col];
+                      physics: const NeverScrollableScrollPhysics(),
+                      gridDelegate:
+                          const SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: GameBoard.boardSize,
+                        childAspectRatio: 1,
+                      ),
+                      itemCount: GameBoard.boardSize * GameBoard.boardSize,
+                      itemBuilder: (context, index) {
+                        int row = index ~/ GameBoard.boardSize;
+                        int col = index % GameBoard.boardSize;
+                        TileType type = GameBoard.boardLayout[row][col];
 
-                      final placedKey = '$row-$col';
-                      final placedLetter = placedTiles[placedKey];
+                        final placedKey = '$row-$col';
+                        final placedLetter = placedTiles[placedKey];
 
-                      return DragTarget<Map<String, dynamic>>(
-                        onAccept: (letterData) {
-                          placeLetter(row, col, letterData);
-                        },
-                        builder: (context, candidateData, rejectedData) {
-                          return Container(
+                        return GestureDetector(
+                          onTap: () {
+                            _handleTileTap(row, col);
+                          },
+                          child: Container(
                             margin: const EdgeInsets.all(0.2),
                             decoration: BoxDecoration(
                               color: _getTileColor(type),
@@ -207,18 +206,18 @@ class _GameScreenState extends State<GameScreen> {
                             ),
                             child: Center(
                               child: placedLetter != null
-                                  ? Text(placedLetter['letter'],
+                                  ? Text(
+                                      placedLetter['letter'],
                                       style: const TextStyle(
-                                          color: Colors.white,
+                                          color: Colors.black,
                                           fontWeight: FontWeight.bold,
-                                          fontSize: 16))
+                                          fontSize: 16),
+                                    )
                                   : _getTileLabel(type),
                             ),
-                          );
-                        },
-                      );
-                    },
-                  ),
+                          ),
+                        );
+                      }),
                 ),
               ),
             ),
@@ -240,8 +239,7 @@ class _GameScreenState extends State<GameScreen> {
                     opponentUsername: guestUsername!,
                     opponentScore: guestScore ?? 0,
                     remainingLetters: remaining,
-                    selectedLetterChar:
-                        _selectedLetterChar ?? '', // Seçilen harf
+                    selectedLetterChar: _selectedLetterChar ?? '',
                     onLetterTap: _handleLetterTap,
                     onSubmitPressed: () async {
                       try {
@@ -301,6 +299,48 @@ class _GameScreenState extends State<GameScreen> {
         ),
       ),
     );
+  }
+
+  void _handleTileTap(int row, int col) {
+    if (_selectedLetterChar == null || _selectedLetterChar!.isEmpty) {
+      return;
+    }
+
+    final placedKey = '$row-$col';
+
+    if (placedTiles.containsKey(placedKey)) {
+      return;
+    }
+
+    setState(() {
+      placedTiles[placedKey] = {
+        'letter': _selectedLetterChar,
+        'row': row,
+        'col': col,
+      };
+      _selectedLetterChar = '';
+    });
+
+    _savePlacedLetterToFirestore(row, col, _selectedLetterChar!);
+  }
+
+  Future<void> _savePlacedLetterToFirestore(
+      int row, int col, String letter) async {
+    try {
+      final docRef =
+          FirebaseFirestore.instance.collection('games').doc(widget.gameId);
+      final placedKey = '$row-$col';
+
+      await docRef.set({
+        'placedLetters.$placedKey': {
+          'letter': letter,
+          'row': row,
+          'col': col,
+        }
+      }, SetOptions(merge: true));
+    } catch (e) {
+      print('Harf Firestore\'a kaydedilemedi: $e');
+    }
   }
 
   Color _getTileColor(TileType type) {
