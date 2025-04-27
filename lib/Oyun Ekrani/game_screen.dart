@@ -28,6 +28,8 @@ class _GameScreenState extends State<GameScreen> {
   int? hostScore;
   String? hostUsername;
   String? guestUsername;
+  String? currentTurn;
+  bool isFirstMove = true;
 
   Map<String, dynamic> placedTiles = {};
   Map<String, dynamic>? _selectedLetter;
@@ -77,6 +79,8 @@ class _GameScreenState extends State<GameScreen> {
 
   Future<void> fetchGameData() async {
     try {
+      await loadBoardLetters();
+
       var doc = await FirebaseFirestore.instance
           .collection('games')
           .doc(widget.gameId)
@@ -92,6 +96,8 @@ class _GameScreenState extends State<GameScreen> {
               int.tryParse(data['scores']['hostUserID'].toString()) ?? 0;
           guestScore =
               int.tryParse(data['scores']['guestUserID'].toString()) ?? 0;
+          isFirstMove = data['isFirstMove'] ?? true;
+          currentTurn = data['turn'];
         });
       }
     } catch (e) {
@@ -147,21 +153,39 @@ class _GameScreenState extends State<GameScreen> {
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.blue.shade900.withOpacity(0.9),
-        title: const Text(
-          "KELİME MAYINLARI",
-          style: TextStyle(
-              fontWeight: FontWeight.bold, fontSize: 20, color: Colors.white),
-        ),
         centerTitle: true,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.white),
           onPressed: () => Navigator.of(context).pop(),
         ),
+        title: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+              "KELİME MAYINLARI",
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 20,
+                color: Colors.white,
+              ),
+            ),
+            Text(
+              currentTurn == (widget.isHost ? 'host' : 'guest')
+                  ? 'Senin sıran!'
+                  : 'Rakibinin sırası...',
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
         actions: [
           IconButton(
             icon: const Icon(Icons.settings, color: Colors.white),
             onPressed: () {},
-          )
+          ),
         ],
         elevation: 4,
       ),
@@ -233,61 +257,101 @@ class _GameScreenState extends State<GameScreen> {
                 int remaining = snapshot.data ?? 0;
 
                 return BottomPanel(
-                    letters: _playerLetters,
-                    myUsername: hostUsername!,
-                    myScore: hostScore ?? 0,
-                    opponentUsername: guestUsername!,
-                    opponentScore: guestScore ?? 0,
-                    remainingLetters: remaining,
-                    selectedLetterChar: _selectedLetterChar ?? '',
-                    onLetterTap: _handleLetterTap,
-                    onSubmitPressed: () async {
-                      try {
-                        final placedLetters = await getPlacedLetters();
+                  letters: _playerLetters,
+                  myUsername: hostUsername!,
+                  myScore: hostScore ?? 0,
+                  opponentUsername: guestUsername!,
+                  opponentScore: guestScore ?? 0,
+                  remainingLetters: remaining,
+                  selectedLetterChar: _selectedLetterChar ?? '',
+                  onLetterTap: _handleLetterTap,
+                  onSubmitPressed: () async {
+                    try {
+                      final isHostTurn = currentTurn == 'host' && widget.isHost;
+                      final isGuestTurn =
+                          currentTurn == 'guest' && !widget.isHost;
 
-                        if (placedLetters.isEmpty) {
+                      if (!isHostTurn && !isGuestTurn) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Sıra sende değil.')),
+                        );
+                        return;
+                      }
+
+                      final placedLetters = await getPlacedLetters();
+
+                      if (placedLetters.isEmpty) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                              content: Text('Tahtaya harf yerleştirin.')),
+                        );
+                        return;
+                      }
+
+                      if (isFirstMove) {
+                        bool touchesCenter = placedLetters.any((letter) {
+                          return letter['row'] == 7 && letter['col'] == 7;
+                        });
+
+                        if (!touchesCenter) {
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(
-                                content: Text('Tahtaya harf yerleştirin.')),
+                                content: Text(
+                                    'İlk kelimeniz ekranın ortasına (8,8) değmelidir.')),
                           );
                           return;
                         }
-
-                        await updatePlacedLetters(placedLetters);
-
-                        final letterKey =
-                            widget.isHost ? 'hostLetters' : 'guestLetters';
-                        final newLetters =
-                            await _gameManager.drawLettersFromPool(
-                          widget.gameId,
-                          placedLetters.length,
-                        );
-
-                        await FirebaseFirestore.instance
-                            .collection('games')
-                            .doc(widget.gameId)
-                            .update({
-                          letterKey: newLetters,
-                          "isFirstMove": false,
-                        });
-
-                        setState(() {
-                          _playerLetters = newLetters;
-                          placedTiles.clear();
-                        });
-
-                        await fetchGameData();
-
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                              content: Text('Kelime başarıyla gönderildi!')),
-                        );
-                      } catch (e) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('Hata oluştu: $e')),
-                        );
                       }
-                    });
+
+                      await updatePlacedLetters(placedLetters);
+                      await savePlacedTilesToBoardLetters();
+
+                      final letterKey =
+                          widget.isHost ? 'hostLetters' : 'guestLetters';
+                      final newLetters = await _gameManager.drawLettersFromPool(
+                        widget.gameId,
+                        placedLetters.length,
+                      );
+
+                      await FirebaseFirestore.instance
+                          .collection('games')
+                          .doc(widget.gameId)
+                          .update({
+                        letterKey: newLetters,
+                        "isFirstMove": false,
+                      });
+
+                      final newTurn = widget.isHost ? 'guest' : 'host';
+                      await FirebaseFirestore.instance
+                          .collection('games')
+                          .doc(widget.gameId)
+                          .update({'turn': newTurn});
+
+                      setState(() {
+                        _playerLetters = newLetters;
+                        placedTiles.clear();
+                      });
+
+                      await fetchGameData();
+
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                            content: Text('Kelime başarıyla gönderildi!')),
+                      );
+                    } catch (e) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Hata oluştu: $e')),
+                      );
+                    }
+                  },
+                  onResetPressed: () {
+                    _resetPlacedTiles();
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                          content: Text('Şimdi tekrar yazabilirsiniz.')),
+                    );
+                  },
+                );
               },
             )
           ],
@@ -296,7 +360,63 @@ class _GameScreenState extends State<GameScreen> {
     );
   }
 
+  Future<void> savePlacedTilesToBoardLetters() async {
+    final gameRef =
+        FirebaseFirestore.instance.collection('games').doc(widget.gameId);
+    final boardLettersRef = gameRef.collection('boardLetters');
+
+    for (var tile in placedTiles.values) {
+      await boardLettersRef.add({
+        'row': tile['row'],
+        'col': tile['col'],
+        'letter': tile['letter'],
+      });
+    }
+  }
+
+  Future<void> loadBoardLetters() async {
+    final boardLettersSnapshot = await FirebaseFirestore.instance
+        .collection('games')
+        .doc(widget.gameId)
+        .collection('boardLetters')
+        .get();
+
+    for (var doc in boardLettersSnapshot.docs) {
+      final data = doc.data();
+      final row = data['row'];
+      final col = data['col'];
+      final letter = data['letter'];
+
+      final placedKey = '$row-$col';
+
+      placedTiles[placedKey] = {
+        'row': row,
+        'col': col,
+        'letter': letter,
+      };
+    }
+
+    setState(() {}); // GameBoard güncellensin diye
+  }
+
+  void _resetPlacedTiles() {
+    setState(() {
+      placedTiles.clear();
+    });
+    _savePlacedLetterToFirestore();
+  }
+
   void _handleTileTap(int row, int col) {
+    final isHostTurn = currentTurn == 'host' && widget.isHost;
+    final isGuestTurn = currentTurn == 'guest' && !widget.isHost;
+
+    if (!isHostTurn && !isGuestTurn) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Sıra sende değil.')),
+      );
+      return;
+    }
+
     if (_selectedLetterChar == null || _selectedLetterChar!.isEmpty) {
       return;
     }
@@ -364,10 +484,25 @@ class _GameScreenState extends State<GameScreen> {
     try {
       final gameDoc =
           FirebaseFirestore.instance.collection('games').doc(widget.gameId);
+      final docSnapshot = await gameDoc.get();
+      final data = docSnapshot.data();
+
+      if (data == null) return;
+
+      String currentTurn = data['turn'];
+      String hostUserID = data['hostUserID'];
+      String guestUserID = data['guestUserID'];
+
+      String newTurn;
+      if (currentTurn == hostUserID) {
+        newTurn = guestUserID;
+      } else {
+        newTurn = hostUserID;
+      }
 
       await gameDoc.update({
         'placedLetters': placedLetters,
-        'turn': widget.isHost ? 'guest' : 'host',
+        'turn': newTurn,
       });
     } catch (e) {
       print("Harfler güncellenirken hata: $e");

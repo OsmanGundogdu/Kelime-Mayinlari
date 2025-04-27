@@ -10,6 +10,7 @@ class BottomPanel extends StatelessWidget {
   final String selectedLetterChar;
   final Function(Map<String, dynamic>) onLetterTap;
   final VoidCallback onSubmitPressed;
+  final VoidCallback onResetPressed;
 
   const BottomPanel({
     super.key,
@@ -22,6 +23,7 @@ class BottomPanel extends StatelessWidget {
     required this.selectedLetterChar,
     required this.onLetterTap,
     required this.onSubmitPressed,
+    required this.onResetPressed,
   });
 
   @override
@@ -60,8 +62,7 @@ class BottomPanel extends StatelessWidget {
                       const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   decoration: BoxDecoration(
                     color: isSelected
-                        ? Colors.green
-                            .withOpacity(0.8) // Seçilen harfe özel renk
+                        ? Colors.green.withOpacity(0.8)
                         : Colors.orange.withOpacity(0.8),
                     borderRadius: BorderRadius.circular(10),
                     boxShadow: const [
@@ -97,27 +98,19 @@ class BottomPanel extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              GestureDetector(
-                onTap: () {
-                  // TODO: Oyunu başlat
-                },
-                child: Container(
-                  width: 100,
-                  height: 100,
-                  decoration: const BoxDecoration(
-                    color: Colors.green,
-                    shape: BoxShape.circle,
+              ElevatedButton(
+                onPressed: onResetPressed,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.yellow,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
                   ),
-                  child: const Icon(Icons.play_arrow,
-                      color: Colors.white, size: 80),
                 ),
+                child: const Text('Tekrar Yaz',
+                    style: TextStyle(color: Colors.black)),
               ),
               Column(
                 children: [
-                  const Icon(Icons.more_vert, color: Colors.white),
-                  const Text("Daha",
-                      style: TextStyle(color: Colors.white, fontSize: 16)),
-                  const SizedBox(height: 20),
                   ElevatedButton(
                     onPressed: onSubmitPressed,
                     style: ElevatedButton.styleFrom(

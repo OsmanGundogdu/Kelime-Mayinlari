@@ -2,7 +2,6 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:proje2/Oyun%20Ekrani/game_screen.dart';
 
-// Oyun modeli
 class Game {
   final String opponentName;
   final int userScore;
@@ -88,7 +87,7 @@ class ActiveGamesScreen extends StatelessWidget {
                         ? doc['guestUsername'] ?? 'Rakip Bekleniyor'
                         : doc['hostUsername'];
 
-                    final turn = doc['turn'] ?? 'user';
+                    final turn = doc['turn'] ?? 'user'; // Turn bilgisi
 
                     final game = Game(
                       opponentName: opponentName,
@@ -128,7 +127,7 @@ class ActiveGamesScreen extends StatelessWidget {
           children: [
             Text('Puanınız: ${game.userScore}'),
             Text('Rakibin Puanı: ${game.opponentScore}'),
-            Text('Sıra: ${userId == doc['hostUserID'] ? 'Sizde' : 'Rakipte'}'),
+            Text('Sıra: ${game.turn == 'host' ? 'Host\'ta' : 'Guest\'te'}'),
           ],
         ),
         trailing: const Icon(Icons.arrow_forward, color: Colors.black),
@@ -152,8 +151,13 @@ class GameDetailScreen extends StatelessWidget {
   final Game game;
   final String userId;
   final QueryDocumentSnapshot doc;
-  const GameDetailScreen(
-      {super.key, required this.game, required this.userId, required this.doc});
+
+  const GameDetailScreen({
+    super.key,
+    required this.game,
+    required this.userId,
+    required this.doc,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -186,25 +190,31 @@ class GameDetailScreen extends StatelessWidget {
                     style: const TextStyle(
                       fontSize: 26,
                       fontWeight: FontWeight.bold,
-                      color: Colors.amberAccent,
+                      color: Colors.black,
                     ),
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 10),
                   Text(
+                      'Siz '
+                      '${userId == doc['hostUserID'] ? 'Hostsunuz' : 'Guestsiniz'}',
+                      style: const TextStyle(
+                        fontSize: 22,
+                        color: Colors.black,
+                      ),
+                      textAlign: TextAlign.center),
+                  Text(
                     'Puanınız: ${game.userScore}',
-                    style: const TextStyle(
-                        fontSize: 22, color: Colors.amberAccent),
+                    style: const TextStyle(fontSize: 22, color: Colors.black),
                     textAlign: TextAlign.center,
                   ),
                   Text(
                     'Rakibin Puanı: ${game.opponentScore}',
-                    style: const TextStyle(
-                        fontSize: 22, color: Colors.amberAccent),
+                    style: const TextStyle(fontSize: 22, color: Colors.black),
                     textAlign: TextAlign.center,
                   ),
                   Text(
-                    'Sıra: ${userId == doc['hostUserID'] ? 'Sizde' : 'Rakipte'}',
+                    'Sıra: ${game.turn == 'host' ? 'Host\'ta' : 'Guest\'te'}',
                     style: const TextStyle(
                         fontSize: 22, color: Colors.amberAccent),
                     textAlign: TextAlign.center,
@@ -213,15 +223,15 @@ class GameDetailScreen extends StatelessWidget {
                   ElevatedButton(
                     onPressed: () {
                       Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => GameScreen(
-                              gameId: doc.id,
-                              currentUserId: userId,
-                              isHost:
-                                  userId == doc['hostUserID'] ? true : false,
-                            ),
-                          ));
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => GameScreen(
+                            gameId: doc.id,
+                            currentUserId: userId,
+                            isHost: userId == doc['hostUserID'] ? true : false,
+                          ),
+                        ),
+                      );
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.lightBlueAccent.withOpacity(0.7),
