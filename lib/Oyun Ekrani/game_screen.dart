@@ -32,7 +32,7 @@ class _GameScreenState extends State<GameScreen> {
   bool isFirstMove = true;
 
   Map<String, dynamic> placedTiles = {};
-  Map<String, dynamic>? _selectedLetter;
+  Map<String, dynamic> boardTiles = {};
   String _selectedLetterChar = '';
 
   @override
@@ -44,7 +44,6 @@ class _GameScreenState extends State<GameScreen> {
 
   void _drawInitialLetters() async {
     final String gameId = widget.gameId;
-    final String currentUserId = widget.currentUserId;
     final bool isHost = widget.isHost;
     final gameDoc = FirebaseFirestore.instance.collection('games').doc(gameId);
     final snapshot = await gameDoc.get();
@@ -214,7 +213,8 @@ class _GameScreenState extends State<GameScreen> {
                         TileType type = GameBoard.boardLayout[row][col];
 
                         final placedKey = '$row-$col';
-                        final placedLetter = placedTiles[placedKey];
+                        final placedLetter =
+                            placedTiles[placedKey] ?? boardTiles[placedKey];
 
                         return GestureDetector(
                           onTap: () {
@@ -263,7 +263,7 @@ class _GameScreenState extends State<GameScreen> {
                   opponentUsername: guestUsername!,
                   opponentScore: guestScore ?? 0,
                   remainingLetters: remaining,
-                  selectedLetterChar: _selectedLetterChar ?? '',
+                  selectedLetterChar: _selectedLetterChar,
                   onLetterTap: _handleLetterTap,
                   onSubmitPressed: () async {
                     try {
@@ -278,7 +278,7 @@ class _GameScreenState extends State<GameScreen> {
                         return;
                       }
 
-                      final placedLetters = await getPlacedLetters();
+                      final placedLetters = getCurrentTurnPlacedLetters();
 
                       if (placedLetters.isEmpty) {
                         ScaffoldMessenger.of(context).showSnackBar(
@@ -308,16 +308,44 @@ class _GameScreenState extends State<GameScreen> {
 
                       final letterKey =
                           widget.isHost ? 'hostLetters' : 'guestLetters';
+
+                      List<Map<String, dynamic>> remainingLetters =
+                          List.from(_playerLetters);
+
+                      Map<String, int> usedCounts = {};
+                      for (var used in placedLetters) {
+                        usedCounts[used['letter']] =
+                            (usedCounts[used['letter']] ?? 0) + 1;
+                      }
+
+                      for (var entry in usedCounts.entries) {
+                        int countToRemove = entry.value;
+                        String charToRemove = entry.key;
+
+                        for (int i = 0; i < countToRemove; i++) {
+                          int index = remainingLetters.indexWhere(
+                              (letter) => letter['char'] == charToRemove);
+                          if (index != -1) {
+                            remainingLetters.removeAt(index);
+                          }
+                        }
+                      }
+
                       final newLetters = await _gameManager.drawLettersFromPool(
                         widget.gameId,
                         placedLetters.length,
                       );
 
+                      final updatedLetters = [
+                        ...remainingLetters,
+                        ...newLetters
+                      ];
+
                       await FirebaseFirestore.instance
                           .collection('games')
                           .doc(widget.gameId)
                           .update({
-                        letterKey: newLetters,
+                        letterKey: updatedLetters,
                         "isFirstMove": false,
                       });
 
@@ -328,7 +356,7 @@ class _GameScreenState extends State<GameScreen> {
                           .update({'turn': newTurn});
 
                       setState(() {
-                        _playerLetters = newLetters;
+                        _playerLetters = updatedLetters;
                         placedTiles.clear();
                       });
 
@@ -360,17 +388,32 @@ class _GameScreenState extends State<GameScreen> {
     );
   }
 
+  List<Map<String, dynamic>> getCurrentTurnPlacedLetters() {
+    return placedTiles.entries
+        .map((e) => {
+              'row': e.value['row'],
+              'col': e.value['col'],
+              'letter': e.value['letter'],
+            })
+        .toList();
+  }
+
   Future<void> savePlacedTilesToBoardLetters() async {
-    final gameRef =
-        FirebaseFirestore.instance.collection('games').doc(widget.gameId);
-    final boardLettersRef = gameRef.collection('boardLetters');
+    final boardLettersRef = FirebaseFirestore.instance
+        .collection('games')
+        .doc(widget.gameId)
+        .collection('boardLetters');
+
+    final existingDocs = await boardLettersRef.get();
+    final existingKeys = existingDocs.docs
+        .map((doc) => '${doc.data()['row']}-${doc.data()['col']}')
+        .toSet();
 
     for (var tile in placedTiles.values) {
-      await boardLettersRef.add({
-        'row': tile['row'],
-        'col': tile['col'],
-        'letter': tile['letter'],
-      });
+      final key = '${tile['row']}-${tile['col']}';
+      if (!existingKeys.contains(key)) {
+        await boardLettersRef.add(tile);
+      }
     }
   }
 
@@ -381,22 +424,22 @@ class _GameScreenState extends State<GameScreen> {
         .collection('boardLetters')
         .get();
 
+    boardTiles.clear();
     for (var doc in boardLettersSnapshot.docs) {
       final data = doc.data();
       final row = data['row'];
       final col = data['col'];
       final letter = data['letter'];
+      final key = '$row-$col';
 
-      final placedKey = '$row-$col';
-
-      placedTiles[placedKey] = {
+      boardTiles[key] = {
         'row': row,
         'col': col,
         'letter': letter,
       };
     }
 
-    setState(() {}); // GameBoard güncellensin diye
+    setState(() {});
   }
 
   void _resetPlacedTiles() {
@@ -417,11 +460,12 @@ class _GameScreenState extends State<GameScreen> {
       return;
     }
 
-    if (_selectedLetterChar == null || _selectedLetterChar!.isEmpty) {
+    if (_selectedLetterChar.isEmpty) {
       return;
     }
 
     final placedKey = '$row-$col';
+    final placedLetter = placedTiles[placedKey] ?? boardTiles[placedKey];
 
     if (placedTiles.containsKey(placedKey)) {
       return;

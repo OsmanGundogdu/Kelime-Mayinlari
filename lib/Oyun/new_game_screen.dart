@@ -171,6 +171,12 @@ class _NewGameScreenState extends State<NewGameScreen> {
         'createdAt': FieldValue.serverTimestamp(),
       });
 
+      await newDocRef.collection('boardLetters').add({
+        'row': -1,
+        'col': -1,
+        'letter': '',
+      });
+
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Oyun oluşturuldu. Rakip bekleniyor...')),
       );
