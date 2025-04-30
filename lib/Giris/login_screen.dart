@@ -49,7 +49,7 @@ class _LoginScreenState extends State<LoginScreen> {
       final storedPassword = userDoc['password'];
 
       if (storedPassword == hashPassword(password)) {
-        final String userId = userDoc.id; // Firestore'daki döküman ID
+        final String userId = userDoc.id;
         final String username = userDoc['username'];
         final int gamesPlayed = userDoc['gameplayed'] ?? 0;
         final int gamesWon = userDoc['gamewon'] ?? 0;
@@ -140,10 +140,11 @@ class _LoginScreenState extends State<LoginScreen> {
                 const SizedBox(height: 10),
                 TextButton(
                   onPressed: () {
-                    Navigator.pushAndRemoveUntil(
+                    Navigator.pushReplacement(
                       context,
-                      MaterialPageRoute(builder: (_) => const RegisterScreen()),
-                      (route) => false,
+                      MaterialPageRoute(
+                        builder: (_) => const RegisterScreen(),
+                      ),
                     );
                   },
                   child: const Text(

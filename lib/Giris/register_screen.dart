@@ -94,6 +94,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
         'email': email,
         'username': username,
         'password': hashedPassword,
+        'gameplayed': 0,
+        'gamewon': 0
       });
 
       ScaffoldMessenger.of(context).showSnackBar(
@@ -102,8 +104,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 "Başarılı bir şekilde kaydoldunuz. Şimdi giriş yapabilirsiniz!")),
       );
 
-      Navigator.pop(context);
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => const LoginScreen()),
+      );
     } catch (e) {
+      print("HATA: $e");
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text("Kaydolurken bir hata çıktı: $e")),
       );
@@ -207,10 +213,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 const SizedBox(height: 10),
                 TextButton(
                   onPressed: () {
-                    Navigator.pushAndRemoveUntil(
+                    Navigator.pushReplacement(
                       context,
-                      MaterialPageRoute(builder: (_) => const LoginScreen()),
-                      (route) => false,
+                      MaterialPageRoute(
+                          builder: (context) => const LoginScreen()),
                     );
                   },
                   child: const Text('Zaten kaydoldum, Giriş Yap',

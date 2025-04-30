@@ -87,7 +87,7 @@ class ActiveGamesScreen extends StatelessWidget {
                         ? doc['guestUsername'] ?? 'Rakip Bekleniyor'
                         : doc['hostUsername'];
 
-                    final turn = doc['turn'] ?? 'user'; // Turn bilgisi
+                    final turn = doc['turn'] ?? 'user';
 
                     final game = Game(
                       opponentName: opponentName,
@@ -140,10 +140,8 @@ class ActiveGamesScreen extends StatelessWidget {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => GameDetailScreen(
-            game: game,
-            userId: userId,
-            doc: doc), // Ensure the correct Game class is used
+        builder: (context) =>
+            GameDetailScreen(game: game, userId: userId, doc: doc),
       ),
     );
   }

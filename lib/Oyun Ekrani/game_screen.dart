@@ -30,6 +30,7 @@ class _GameScreenState extends State<GameScreen> {
   String? guestUsername;
   String? currentTurn;
   bool isFirstMove = true;
+  final List<String> _disabledLetters = [];
 
   Map<String, dynamic> placedTiles = {};
   Map<String, dynamic> boardTiles = {};
@@ -52,6 +53,13 @@ class _GameScreenState extends State<GameScreen> {
 
     if (snapshot.exists) {
       final data = snapshot.data()!;
+
+      // ✅ letter alanı yoksa, oluştur
+      if (!data.containsKey('letter')) {
+        await _gameManager.generateLetterPointMap(gameId);
+      }
+
+      // ✅ letterPool yoksa, oluştur
       if (!data.containsKey('letterPool')) {
         await _gameManager.generateAndSaveLetterPool(gameId);
       }
@@ -88,13 +96,16 @@ class _GameScreenState extends State<GameScreen> {
       var data = doc.data();
 
       if (data != null) {
+        final hostID = data['hostUserID'];
+        final guestID = data['guestUserID'];
+
         setState(() {
           hostUsername = data['hostUsername'];
           guestUsername = data['guestUsername'];
           hostScore =
-              int.tryParse(data['scores']['hostUserID'].toString()) ?? 0;
+              int.tryParse(data['scores'][hostID]?.toString() ?? '0') ?? 0;
           guestScore =
-              int.tryParse(data['scores']['guestUserID'].toString()) ?? 0;
+              int.tryParse(data['scores'][guestID]?.toString() ?? '0') ?? 0;
           isFirstMove = data['isFirstMove'] ?? true;
           currentTurn = data['turn'];
         });
@@ -304,6 +315,11 @@ class _GameScreenState extends State<GameScreen> {
                       }
 
                       await updatePlacedLetters(placedLetters);
+                      await updateUserScoreWithPlacedLettersFromGameLetterField(
+                        widget.gameId,
+                        widget.currentUserId,
+                        placedLetters,
+                      );
                       await savePlacedTilesToBoardLetters();
 
                       final letterKey =
@@ -358,6 +374,7 @@ class _GameScreenState extends State<GameScreen> {
                       setState(() {
                         _playerLetters = updatedLetters;
                         placedTiles.clear();
+                        _disabledLetters.clear();
                       });
 
                       await fetchGameData();
@@ -374,11 +391,14 @@ class _GameScreenState extends State<GameScreen> {
                   },
                   onResetPressed: () {
                     _resetPlacedTiles();
+                    setState(() {
+                      _disabledLetters.clear();
+                    });
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                          content: Text('Şimdi tekrar yazabilirsiniz.')),
+                      const SnackBar(content: Text('Tekrar yazabilirsiniz.')),
                     );
                   },
+                  disabledLetters: _disabledLetters,
                 );
               },
             )
@@ -460,16 +480,10 @@ class _GameScreenState extends State<GameScreen> {
       return;
     }
 
-    if (_selectedLetterChar.isEmpty) {
-      return;
-    }
+    if (_selectedLetterChar.isEmpty) return;
 
     final placedKey = '$row-$col';
-    final placedLetter = placedTiles[placedKey] ?? boardTiles[placedKey];
-
-    if (placedTiles.containsKey(placedKey)) {
-      return;
-    }
+    if (placedTiles.containsKey(placedKey)) return;
 
     setState(() {
       placedTiles[placedKey] = {
@@ -477,6 +491,8 @@ class _GameScreenState extends State<GameScreen> {
         'row': row,
         'col': col,
       };
+      _disabledLetters.add(_selectedLetterChar);
+      _selectedLetterChar = '';
     });
 
     _savePlacedLetterToFirestore();
@@ -601,6 +617,40 @@ class _GameScreenState extends State<GameScreen> {
       default:
         return const SizedBox.shrink();
     }
+  }
+
+  Future<void> updateUserScoreWithPlacedLettersFromGameLetterField(
+    String gameId,
+    String currentUserId,
+    List<Map<String, dynamic>> placedLetters,
+  ) async {
+    final gameDocRef =
+        FirebaseFirestore.instance.collection('games').doc(gameId);
+    final gameSnapshot = await gameDocRef.get();
+    final gameData = gameSnapshot.data();
+
+    if (gameData == null || !gameData.containsKey('letter')) return;
+
+    List<dynamic> letterList = gameData['letter'];
+    Map<String, int> letterPoints = {
+      for (var item in letterList)
+        item['char'].toString().toUpperCase():
+            int.tryParse(item['point'].toString()) ?? 0
+    };
+
+    int totalPoints = 0;
+    for (var letter in placedLetters) {
+      String char = letter['letter'].toString().toUpperCase();
+      totalPoints += letterPoints[char] ?? 0;
+    }
+
+    Map<String, dynamic> currentScores =
+        Map<String, dynamic>.from(gameData['scores'] ?? {});
+    int existingScore =
+        int.tryParse(currentScores[currentUserId]?.toString() ?? '0') ?? 0;
+    currentScores[currentUserId] = existingScore + totalPoints;
+
+    await gameDocRef.update({'scores': currentScores});
   }
 }
 

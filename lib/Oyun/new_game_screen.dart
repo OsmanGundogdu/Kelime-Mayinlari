@@ -136,8 +136,11 @@ class _NewGameScreenState extends State<NewGameScreen> {
         .where('duration', isEqualTo: selectedDuration)
         .get();
 
-    final openGames =
-        querySnapshot.docs.where((doc) => doc['guestUserID'] == null).toList();
+    final openGames = querySnapshot.docs
+        .where((doc) =>
+            doc['guestUserID'] == null &&
+            doc['hostUserID'] != widget.currentUserId)
+        .toList();
 
     if (openGames.isNotEmpty) {
       final matchedGame = openGames.first;

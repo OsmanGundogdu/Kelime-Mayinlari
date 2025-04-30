@@ -39,6 +39,21 @@ class GameManager {
 
   List<Map<String, dynamic>> _letterPool = [];
 
+  Future<void> generateLetterPointMap(String gameId) async {
+    List<Map<String, dynamic>> letterPointMap =
+        _letterData.entries.map((entry) {
+      return {
+        'char': entry.key,
+        'point': entry.value['point'],
+      };
+    }).toList();
+
+    await _firestore.collection('games').doc(gameId).set(
+      {'letter': letterPointMap},
+      SetOptions(merge: true),
+    );
+  }
+
   Future<void> generateAndSaveLetterPool(String gameId) async {
     List<Map<String, dynamic>> pool = [];
     _letterData.forEach((char, data) {

@@ -8,6 +8,7 @@ class BottomPanel extends StatelessWidget {
   final int opponentScore;
   final int remainingLetters;
   final String selectedLetterChar;
+  final List<String> disabledLetters;
   final Function(Map<String, dynamic>) onLetterTap;
   final VoidCallback onSubmitPressed;
   final VoidCallback onResetPressed;
@@ -21,6 +22,7 @@ class BottomPanel extends StatelessWidget {
     required this.opponentScore,
     required this.remainingLetters,
     required this.selectedLetterChar,
+    required this.disabledLetters,
     required this.onLetterTap,
     required this.onSubmitPressed,
     required this.onResetPressed,
@@ -28,6 +30,13 @@ class BottomPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    Map<String, int> disabledCountMap = {};
+    for (var letter in disabledLetters) {
+      disabledCountMap[letter] = (disabledCountMap[letter] ?? 0) + 1;
+    }
+
+    Map<String, int> currentCountMap = {};
+
     return Container(
       color: Colors.blue.shade900.withOpacity(0.8),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -53,42 +62,55 @@ class BottomPanel extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: letters.map((letter) {
-              bool isSelected = selectedLetterChar == letter['char'];
+              final char = letter['char'];
+              final isSelected = selectedLetterChar == char;
+
+              currentCountMap[char] = (currentCountMap[char] ?? 0);
+              final isDisabled =
+                  currentCountMap[char]! < (disabledCountMap[char] ?? 0);
+
+              if (isDisabled) {
+                currentCountMap[char] = currentCountMap[char]! + 1;
+              }
+
               return GestureDetector(
-                onTap: () => onLetterTap(letter),
-                child: Container(
-                  margin: const EdgeInsets.symmetric(horizontal: 4),
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  decoration: BoxDecoration(
-                    color: isSelected
-                        ? Colors.green.withOpacity(0.8)
-                        : Colors.orange.withOpacity(0.8),
-                    borderRadius: BorderRadius.circular(10),
-                    boxShadow: const [
-                      BoxShadow(
-                        color: Colors.black26,
-                        blurRadius: 4,
-                        offset: Offset(2, 2),
-                      )
-                    ],
-                  ),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        letter['char'],
-                        style: TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                          color: isSelected ? Colors.white : Colors.black,
+                onTap: isDisabled ? null : () => onLetterTap(letter),
+                child: Opacity(
+                  opacity: isDisabled ? 0.3 : 1.0,
+                  child: Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 4),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: isSelected
+                          ? Colors.green.withOpacity(0.8)
+                          : Colors.orange.withOpacity(0.8),
+                      borderRadius: BorderRadius.circular(10),
+                      boxShadow: const [
+                        BoxShadow(
+                          color: Colors.black26,
+                          blurRadius: 4,
+                          offset: Offset(2, 2),
+                        )
+                      ],
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          char,
+                          style: TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                            color: isSelected ? Colors.white : Colors.black,
+                          ),
                         ),
-                      ),
-                      Text(
-                        '${letter['point']}',
-                        style: const TextStyle(fontSize: 12),
-                      ),
-                    ],
+                        Text(
+                          '${letter['point']}',
+                          style: const TextStyle(fontSize: 12),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               );
@@ -109,22 +131,16 @@ class BottomPanel extends StatelessWidget {
                 child: const Text('Tekrar Yaz',
                     style: TextStyle(color: Colors.black)),
               ),
-              Column(
-                children: [
-                  ElevatedButton(
-                    onPressed: onSubmitPressed,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.green,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    child: const Text(
-                      'Onayla',
-                      style: TextStyle(color: Colors.white),
-                    ),
+              ElevatedButton(
+                onPressed: onSubmitPressed,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.green,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
                   ),
-                ],
+                ),
+                child:
+                    const Text('Onayla', style: TextStyle(color: Colors.white)),
               ),
             ],
           ),
