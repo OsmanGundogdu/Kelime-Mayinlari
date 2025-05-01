@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:proje2/Giris/login_screen.dart';
 import 'package:proje2/Oyun/completed_games.dart';
@@ -126,21 +127,20 @@ class HomeScreen extends StatelessWidget {
                         ],
                       ),
                       const SizedBox(height: 40),
-                      _buildCircleMenuButton(
-                        context,
-                        label: 'Biten\nOyunlar',
-                        icon: Icons.history,
-                        onPressed: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => const CompletedGamesScreen(
-                                completedGames: [], // TODO: Buraya Firestore'dan gelen bitmiş oyunlar eklenecek
-                              ),
+                      _buildCircleMenuButton(context,
+                          label: 'Biten\nOyunlar',
+                          icon: Icons.history, onPressed: () async {
+                        final completedGames =
+                            await fetchCompletedGames(userId);
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => CompletedGamesScreen(
+                              completedGames: completedGames,
                             ),
-                          );
-                        },
-                      ),
+                          ),
+                        );
+                      }),
                     ],
                   ),
                 ),
@@ -244,5 +244,41 @@ class HomeScreen extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  Future<List<Game>> fetchCompletedGames(String userId) async {
+    final querySnapshot = await FirebaseFirestore.instance
+        .collection('games')
+        .where('isGameOver', isEqualTo: true)
+        .get();
+
+    List<Game> completedGames = [];
+
+    for (var doc in querySnapshot.docs) {
+      final data = doc.data();
+      final hostId = data['hostUserID'];
+      final guestId = data['guestUserID'];
+
+      if (userId != hostId && userId != guestId) continue;
+
+      final isHost = userId == hostId;
+      final opponentId = isHost ? guestId : hostId;
+      final opponentName =
+          isHost ? data['guestUsername'] : data['hostUsername'];
+
+      final scores = Map<String, dynamic>.from(data['scores'] ?? {});
+      final userScore = scores[userId]?.toInt() ?? 0;
+      final opponentScore = scores[opponentId]?.toInt() ?? 0;
+
+      completedGames.add(
+        Game(
+          opponentName: opponentName,
+          userScore: userScore,
+          opponentScore: opponentScore,
+        ),
+      );
+    }
+
+    return completedGames;
   }
 }

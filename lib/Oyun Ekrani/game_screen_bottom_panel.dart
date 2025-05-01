@@ -12,6 +12,8 @@ class BottomPanel extends StatelessWidget {
   final Function(Map<String, dynamic>) onLetterTap;
   final VoidCallback onSubmitPressed;
   final VoidCallback onResetPressed;
+  final VoidCallback onPassPressed;
+  final VoidCallback onSurrenderPressed;
 
   const BottomPanel({
     super.key,
@@ -26,6 +28,8 @@ class BottomPanel extends StatelessWidget {
     required this.onLetterTap,
     required this.onSubmitPressed,
     required this.onResetPressed,
+    required this.onPassPressed,
+    required this.onSurrenderPressed,
   });
 
   @override
@@ -58,7 +62,7 @@ class BottomPanel extends StatelessWidget {
                   style: const TextStyle(color: Colors.white, fontSize: 16)),
             ],
           ),
-          const SizedBox(height: 40),
+          const SizedBox(height: 25),
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: letters.map((letter) {
@@ -116,34 +120,71 @@ class BottomPanel extends StatelessWidget {
               );
             }).toList(),
           ),
-          const SizedBox(height: 50),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          const SizedBox(height: 25),
+          Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              ElevatedButton(
-                onPressed: onResetPressed,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.yellow,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+              Center(
+                child: SizedBox(
+                  width: 250,
+                  height: 50,
+                  child: ElevatedButton(
+                    onPressed: onResetPressed,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.yellow,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: const Text('Tekrar Yaz',
+                        style: TextStyle(color: Colors.black)),
                   ),
                 ),
-                child: const Text('Tekrar Yaz',
-                    style: TextStyle(color: Colors.black)),
               ),
-              ElevatedButton(
-                onPressed: onSubmitPressed,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.green,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+              const SizedBox(height: 30),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  ElevatedButton(
+                    onPressed: onSurrenderPressed,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.red,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: const Text('Teslim Ol',
+                        style: TextStyle(color: Colors.white)),
                   ),
-                ),
-                child:
-                    const Text('Onayla', style: TextStyle(color: Colors.white)),
+                  const SizedBox(width: 25),
+                  ElevatedButton(
+                    onPressed: onPassPressed,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.blueGrey,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: const Text('Pas Geç',
+                        style: TextStyle(color: Colors.white)),
+                  ),
+                  const SizedBox(width: 25),
+                  ElevatedButton(
+                    onPressed: onSubmitPressed,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.green,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: const Text('Onayla',
+                        style: TextStyle(color: Colors.white)),
+                  ),
+                ],
               ),
             ],
-          ),
+          )
         ],
       ),
     );
