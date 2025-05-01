@@ -696,18 +696,46 @@ class _GameScreenState extends State<GameScreen> {
   Future<void> surrender() async {
     final gameDocRef =
         FirebaseFirestore.instance.collection('games').doc(widget.gameId);
-    final winner = widget.isHost ? 'guest' : 'host';
+    final gameSnapshot = await gameDocRef.get();
+
+    if (!gameSnapshot.exists) return;
+
+    final gameData = gameSnapshot.data()!;
+    final scores = Map<String, dynamic>.from(gameData['scores'] ?? {});
+    final hostId = gameData['hostUserID'];
+    final guestId = gameData['guestUserID'];
+
+    final surrenderingUserId = widget.isHost ? hostId : guestId;
+    final winnerUserId = widget.isHost ? guestId : hostId;
+    final winnerKey = widget.isHost ? 'guest' : 'host';
+
+    scores[surrenderingUserId] = 0;
+    scores[winnerUserId] = 1;
 
     await gameDocRef.update({
       'isGameOver': true,
-      'winner': winner,
+      'isGameStarted': false,
+      'winner': winnerKey,
+      'scores': scores,
+    });
+
+    final usersCollection = FirebaseFirestore.instance.collection('users');
+
+    await usersCollection.doc(surrenderingUserId).update({
+      'gameplayed': FieldValue.increment(1),
+    });
+
+    await usersCollection.doc(winnerUserId).update({
+      'gameplayed': FieldValue.increment(1),
+      'gamewon': FieldValue.increment(1),
     });
 
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Oyunu teslim ettiniz.')),
+      const SnackBar(content: Text('Oyunu teslim ettiniz.')),
     );
 
-    Navigator.of(context).pop(); // Ana menüye dön
+    Navigator.of(context).pop();
+    Navigator.of(context).pop();
   }
 }
 

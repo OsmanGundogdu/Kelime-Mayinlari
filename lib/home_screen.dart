@@ -20,136 +20,164 @@ class HomeScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final double successRate =
-        gamesPlayed == 0 ? 0 : (gamesWon / gamesPlayed * 100);
+    return StreamBuilder<DocumentSnapshot>(
+      stream: FirebaseFirestore.instance
+          .collection('users')
+          .doc(userId)
+          .snapshots(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          );
+        }
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          'Merhaba, $username 👋',
-          style: TextStyle(color: Colors.white),
-        ),
-        backgroundColor: Colors.brown,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.logout, color: Colors.white),
-            tooltip: 'Çıkış Yap',
-            onPressed: () => Navigator.pushAndRemoveUntil(
-                context,
-                MaterialPageRoute(builder: (context) => const LoginScreen()),
-                (route) => false),
-          ),
-        ],
-      ),
-      body: Stack(
-        children: [
-          Positioned.fill(
-            child: Image.asset(
-              'assets/images/game_bg.png',
-              fit: BoxFit.cover,
+        if (!snapshot.hasData || !snapshot.data!.exists) {
+          return const Scaffold(
+            body: Center(child: Text('Kullanıcı verisi bulunamadı')),
+          );
+        }
+
+        final userData = snapshot.data!.data() as Map<String, dynamic>;
+        final username = userData['username'] ?? 'Kullanıcı';
+        final gamesPlayed = userData['gameplayed'] ?? 0;
+        final gamesWon = userData['gamewon'] ?? 0;
+        final double successRate =
+            gamesPlayed == 0 ? 0 : (gamesWon / gamesPlayed * 100);
+
+        return Scaffold(
+          appBar: AppBar(
+            title: Text(
+              'Merhaba, $username 👋',
+              style: const TextStyle(color: Colors.white),
             ),
+            backgroundColor: Colors.brown,
+            actions: [
+              IconButton(
+                icon: const Icon(Icons.logout, color: Colors.white),
+                tooltip: 'Çıkış Yap',
+                onPressed: () => Navigator.pushAndRemoveUntil(
+                    context,
+                    MaterialPageRoute(
+                        builder: (context) => const LoginScreen()),
+                    (route) => false),
+              ),
+            ],
           ),
-          Container(color: Colors.black.withOpacity(0.3)),
-          Padding(
-            padding: const EdgeInsets.all(24.0),
-            child: Column(
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Expanded(
-                      child: _buildStatCard(
-                        'Oynanan Oyunlar',
-                        gamesPlayed.toString(),
-                        Icons.videogame_asset,
-                        Colors.blue,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: _buildStatCard(
-                        'Kazanılan Oyunlar',
-                        gamesWon.toString(),
-                        Icons.emoji_events,
-                        Colors.amber,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: _buildStatCard(
-                        'Başarı Yüzdesi',
-                        '${successRate.toStringAsFixed(1)}%',
-                        Icons.bar_chart,
-                        successRate < 50 ? Colors.red : Colors.green,
-                      ),
-                    ),
-                  ],
+          body: Stack(
+            children: [
+              Positioned.fill(
+                child: Image.asset(
+                  'assets/images/game_bg.png',
+                  fit: BoxFit.cover,
                 ),
-                const Spacer(),
-                Center(
-                  child: Column(
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
+              ),
+              Container(color: Colors.black.withOpacity(0.3)),
+              Padding(
+                padding: const EdgeInsets.all(24.0),
+                child: Column(
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Expanded(
+                          child: _buildStatCard(
+                            'Oynanan Oyunlar',
+                            gamesPlayed.toString(),
+                            Icons.videogame_asset,
+                            Colors.blue,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: _buildStatCard(
+                            'Kazanılan Oyunlar',
+                            gamesWon.toString(),
+                            Icons.emoji_events,
+                            Colors.amber,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: _buildStatCard(
+                            'Başarı Yüzdesi',
+                            '${successRate.toStringAsFixed(1)}%',
+                            Icons.bar_chart,
+                            successRate < 50 ? Colors.red : Colors.green,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const Spacer(),
+                    Center(
+                      child: Column(
                         children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              _buildCircleMenuButton(
+                                context,
+                                label: 'Yeni Oyun',
+                                icon: Icons.add_circle_outline,
+                                onPressed: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => NewGameScreen(
+                                        currentUserId: userId,
+                                        currentUsername: username,
+                                      ),
+                                    ),
+                                  );
+                                },
+                              ),
+                              const SizedBox(width: 40),
+                              _buildCircleMenuButton(
+                                context,
+                                label: 'Aktif\nOyunlar',
+                                icon: Icons.play_circle_fill,
+                                onPressed: () {
+                                  Navigator.pushNamed(
+                                    context,
+                                    '/activeGames',
+                                    arguments: {
+                                      'userId': userId,
+                                      'username': username,
+                                    },
+                                  );
+                                },
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 40),
                           _buildCircleMenuButton(
                             context,
-                            label: 'Yeni Oyun',
-                            icon: Icons.add_circle_outline,
-                            onPressed: () {
+                            label: 'Biten\nOyunlar',
+                            icon: Icons.history,
+                            onPressed: () async {
+                              final completedGames =
+                                  await fetchCompletedGames(userId);
                               Navigator.push(
                                 context,
                                 MaterialPageRoute(
-                                  builder: (context) => NewGameScreen(
-                                    currentUserId: userId,
-                                    currentUsername: username,
+                                  builder: (context) => CompletedGamesScreen(
+                                    completedGames: completedGames,
                                   ),
                                 ),
                               );
                             },
                           ),
-                          const SizedBox(width: 40),
-                          _buildCircleMenuButton(
-                            context,
-                            label: 'Aktif\nOyunlar',
-                            icon: Icons.play_circle_fill,
-                            onPressed: () {
-                              Navigator.pushNamed(
-                                context,
-                                '/activeGames',
-                                arguments: {
-                                  'userId': userId,
-                                  'username': username,
-                                },
-                              );
-                            },
-                          ),
                         ],
                       ),
-                      const SizedBox(height: 40),
-                      _buildCircleMenuButton(context,
-                          label: 'Biten\nOyunlar',
-                          icon: Icons.history, onPressed: () async {
-                        final completedGames =
-                            await fetchCompletedGames(userId);
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => CompletedGamesScreen(
-                              completedGames: completedGames,
-                            ),
-                          ),
-                        );
-                      }),
-                    ],
-                  ),
+                    ),
+                    const Spacer(),
+                  ],
                 ),
-                const Spacer(),
-              ],
-            ),
+              ),
+            ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 

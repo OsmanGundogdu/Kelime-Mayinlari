@@ -29,8 +29,10 @@ class CompletedGamesScreen extends StatelessWidget {
               itemCount: completedGames.length,
               itemBuilder: (context, index) {
                 final game = completedGames[index];
+                final cardColor = _getCardColor(game);
 
                 return Card(
+                  color: cardColor.withOpacity(0.5),
                   elevation: 5,
                   margin:
                       const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
@@ -38,24 +40,19 @@ class CompletedGamesScreen extends StatelessWidget {
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: ListTile(
-                    onTap: () {
-                      _openGameDetails(context, game);
-                    },
                     title: Text(
                       'Rakip: ${game.opponentName}',
                       style: const TextStyle(
-                          fontSize: 18, fontWeight: FontWeight.bold),
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white),
                     ),
                     subtitle: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('Puanınız: ${game.userScore}'),
-                        Text('Rakibin Puanı: ${game.opponentScore}'),
                         _buildGameResult(game),
                       ],
                     ),
-                    trailing: const Icon(Icons.arrow_forward,
-                        color: Colors.blueAccent),
                   ),
                 );
               },
@@ -66,81 +63,14 @@ class CompletedGamesScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildGameResult(Game game) {
+  Color _getCardColor(Game game) {
     if (game.userScore > game.opponentScore) {
-      return const Text(
-        'Kazandınız!',
-        style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold),
-      );
+      return Colors.green;
     } else if (game.userScore < game.opponentScore) {
-      return const Text(
-        'Kaybettiniz.',
-        style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
-      );
+      return Colors.red;
     } else {
-      return const Text(
-        'Beraberlik',
-        style: TextStyle(color: Colors.orange, fontWeight: FontWeight.bold),
-      );
+      return Colors.amber;
     }
-  }
-
-  void _openGameDetails(BuildContext context, Game game) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => GameDetailScreen(game: game),
-      ),
-    );
-  }
-}
-
-class GameDetailScreen extends StatelessWidget {
-  final Game game;
-
-  const GameDetailScreen({super.key, required this.game});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('Oyun Detayları: ${game.opponentName}'),
-        backgroundColor: Colors.blueAccent,
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(24.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Rakip: ${game.opponentName}',
-              style: const TextStyle(
-                fontSize: 22,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 10),
-            Text('Puanınız: ${game.userScore}'),
-            Text('Rakibin Puanı: ${game.opponentScore}'),
-            _buildGameResult(game),
-            const SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: () {
-                // Burada oyunla ilgili ek işlemler yapılacak.
-              },
-              child: const Text('Yeni Oyun Başlat'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.blueAccent,
-                minimumSize: const Size(double.infinity, 45),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
   }
 
   Widget _buildGameResult(Game game) {
