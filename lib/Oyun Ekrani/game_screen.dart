@@ -35,6 +35,9 @@ class _GameScreenState extends State<GameScreen> {
   Timer? _timer;
   int remainingSeconds = 0;
   bool isMyTurn = false;
+  int? _remainingLetterCount;
+  bool _isLetterCountLoading = true;
+  Widget? _bottomPanel;
 
   Map<String, dynamic> placedTiles = {};
   Map<String, dynamic> boardTiles = {};
@@ -46,6 +49,13 @@ class _GameScreenState extends State<GameScreen> {
     _drawInitialLetters();
     fetchGameData();
     startCountdown(); // süre başlatılır
+
+    _gameManager.getRemainingLetterCount(widget.gameId).then((count) {
+      setState(() {
+        _remainingLetterCount = count;
+        _isLetterCountLoading = false;
+      });
+    });
   }
 
   @override
@@ -64,7 +74,7 @@ class _GameScreenState extends State<GameScreen> {
     if (data == null) return;
 
     final Timestamp? startTime = data['startTime'];
-    final int duration = data['duration'];
+    final int duration = (data['duration'] ?? 2) * 60;
 
     if (startTime == null) return;
 
@@ -201,7 +211,7 @@ class _GameScreenState extends State<GameScreen> {
         });
 
         if (isMyTurn) {
-          remainingSeconds = data['duration'] ?? 120;
+          remainingSeconds = (data['duration'] ?? 2) * 60;
           startLocalCountdown();
         } else {
           stopLocalCountdown();
@@ -335,144 +345,154 @@ class _GameScreenState extends State<GameScreen> {
                   return const Text('Hata: kalan harf yüklenemedi');
                 }
 
-                int remaining = snapshot.data ?? 0;
+                if (_isLetterCountLoading) {
+                  return const CircularProgressIndicator();
+                }
 
-                return BottomPanel(
-                  letters: _playerLetters,
-                  myUsername: hostUsername!,
-                  myScore: hostScore ?? 0,
-                  opponentUsername: guestUsername!,
-                  opponentScore: guestScore ?? 0,
-                  remainingLetters: remaining,
-                  selectedLetterChar: _selectedLetterChar,
-                  onLetterTap: _handleLetterTap,
-                  onSubmitPressed: () async {
-                    try {
-                      final isHostTurn = currentTurn == 'host' && widget.isHost;
-                      final isGuestTurn =
-                          currentTurn == 'guest' && !widget.isHost;
+                if (_bottomPanel == null && !_isLetterCountLoading) {
+                  _bottomPanel = BottomPanel(
+                    letters: _playerLetters,
+                    myUsername: hostUsername!,
+                    myScore: hostScore ?? 0,
+                    opponentUsername: guestUsername!,
+                    opponentScore: guestScore ?? 0,
+                    remainingLetters: _remainingLetterCount!,
+                    selectedLetterChar: _selectedLetterChar,
+                    onLetterTap: _handleLetterTap,
+                    onSubmitPressed: () async {
+                      try {
+                        final isHostTurn =
+                            currentTurn == 'host' && widget.isHost;
+                        final isGuestTurn =
+                            currentTurn == 'guest' && !widget.isHost;
 
-                      if (!isHostTurn && !isGuestTurn) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Sıra sende değil.')),
-                        );
-                        return;
-                      }
-
-                      final placedLetters = getCurrentTurnPlacedLetters();
-
-                      if (placedLetters.isEmpty) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                              content: Text('Tahtaya harf yerleştirin.')),
-                        );
-                        return;
-                      }
-
-                      if (isFirstMove) {
-                        bool touchesCenter = placedLetters.any((letter) {
-                          return letter['row'] == 7 && letter['col'] == 7;
-                        });
-
-                        if (!touchesCenter) {
+                        if (!isHostTurn && !isGuestTurn) {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                                content: Text(
-                                    'İlk kelimeniz ekranın ortasına (8,8) değmelidir.')),
+                            const SnackBar(content: Text('Sıra sende değil.')),
                           );
                           return;
                         }
-                      }
 
-                      await updatePlacedLetters(placedLetters);
-                      await updateUserScoreWithPlacedLettersFromGameLetterField(
-                        widget.gameId,
-                        widget.currentUserId,
-                        placedLetters,
-                      );
-                      await savePlacedTilesToBoardLetters();
+                        final placedLetters = getCurrentTurnPlacedLetters();
 
-                      final letterKey =
-                          widget.isHost ? 'hostLetters' : 'guestLetters';
+                        if (placedLetters.isEmpty) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                                content: Text('Tahtaya harf yerleştirin.')),
+                          );
+                          return;
+                        }
 
-                      List<Map<String, dynamic>> remainingLetters =
-                          List.from(_playerLetters);
+                        if (isFirstMove) {
+                          bool touchesCenter = placedLetters.any((letter) {
+                            return letter['row'] == 7 && letter['col'] == 7;
+                          });
 
-                      Map<String, int> usedCounts = {};
-                      for (var used in placedLetters) {
-                        usedCounts[used['letter']] =
-                            (usedCounts[used['letter']] ?? 0) + 1;
-                      }
-
-                      for (var entry in usedCounts.entries) {
-                        int countToRemove = entry.value;
-                        String charToRemove = entry.key;
-
-                        for (int i = 0; i < countToRemove; i++) {
-                          int index = remainingLetters.indexWhere(
-                              (letter) => letter['char'] == charToRemove);
-                          if (index != -1) {
-                            remainingLetters.removeAt(index);
+                          if (!touchesCenter) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                  content: Text(
+                                      'İlk kelimeniz ekranın ortasına (8,8) değmelidir.')),
+                            );
+                            return;
                           }
                         }
+
+                        await updatePlacedLetters(placedLetters);
+                        await updateUserScoreWithPlacedLettersFromGameLetterField(
+                          widget.gameId,
+                          widget.currentUserId,
+                          placedLetters,
+                        );
+                        await savePlacedTilesToBoardLetters();
+
+                        final letterKey =
+                            widget.isHost ? 'hostLetters' : 'guestLetters';
+
+                        List<Map<String, dynamic>> remainingLetters =
+                            List.from(_playerLetters);
+
+                        Map<String, int> usedCounts = {};
+                        for (var used in placedLetters) {
+                          usedCounts[used['letter']] =
+                              (usedCounts[used['letter']] ?? 0) + 1;
+                        }
+
+                        for (var entry in usedCounts.entries) {
+                          int countToRemove = entry.value;
+                          String charToRemove = entry.key;
+
+                          for (int i = 0; i < countToRemove; i++) {
+                            int index = remainingLetters.indexWhere(
+                                (letter) => letter['char'] == charToRemove);
+                            if (index != -1) {
+                              remainingLetters.removeAt(index);
+                            }
+                          }
+                        }
+
+                        final newLetters =
+                            await _gameManager.drawLettersFromPool(
+                          widget.gameId,
+                          placedLetters.length,
+                        );
+
+                        final updatedLetters = [
+                          ...remainingLetters,
+                          ...newLetters
+                        ];
+
+                        await FirebaseFirestore.instance
+                            .collection('games')
+                            .doc(widget.gameId)
+                            .update({
+                          letterKey: updatedLetters,
+                          "isFirstMove": false,
+                        });
+
+                        final newTurn = widget.isHost ? 'guest' : 'host';
+                        await FirebaseFirestore.instance
+                            .collection('games')
+                            .doc(widget.gameId)
+                            .update({'turn': newTurn});
+
+                        setState(() {
+                          _playerLetters = updatedLetters;
+                          placedTiles.clear();
+                          _disabledLetters.clear();
+                        });
+
+                        await fetchGameData();
+
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                              content: Text('Kelime başarıyla gönderildi!')),
+                        );
+                      } catch (e) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('Hata oluştu: $e')),
+                        );
                       }
-
-                      final newLetters = await _gameManager.drawLettersFromPool(
-                        widget.gameId,
-                        placedLetters.length,
-                      );
-
-                      final updatedLetters = [
-                        ...remainingLetters,
-                        ...newLetters
-                      ];
-
-                      await FirebaseFirestore.instance
-                          .collection('games')
-                          .doc(widget.gameId)
-                          .update({
-                        letterKey: updatedLetters,
-                        "isFirstMove": false,
-                      });
-
-                      final newTurn = widget.isHost ? 'guest' : 'host';
-                      await FirebaseFirestore.instance
-                          .collection('games')
-                          .doc(widget.gameId)
-                          .update({'turn': newTurn});
-
+                      stopLocalCountdown(); // hamle onaylandıysa süre durur
+                    },
+                    onResetPressed: () {
+                      _resetPlacedTiles();
                       setState(() {
-                        _playerLetters = updatedLetters;
-                        placedTiles.clear();
                         _disabledLetters.clear();
                       });
-
-                      await fetchGameData();
-
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                            content: Text('Kelime başarıyla gönderildi!')),
+                        const SnackBar(content: Text('Tekrar yazabilirsiniz.')),
                       );
-                    } catch (e) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('Hata oluştu: $e')),
-                      );
-                    }
-                    stopLocalCountdown(); // hamle onaylandıysa süre durur
-                  },
-                  onResetPressed: () {
-                    _resetPlacedTiles();
-                    setState(() {
-                      _disabledLetters.clear();
-                    });
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Tekrar yazabilirsiniz.')),
-                    );
-                  },
-                  disabledLetters: _disabledLetters,
-                  onPassPressed: () async => await passTurn(),
-                  onSurrenderPressed: () async => await surrender(),
-                );
+                    },
+                    disabledLetters: _disabledLetters,
+                    onPassPressed: () async => await passTurn(),
+                    onSurrenderPressed: () async => await surrender(),
+                  );
+                }
+                if (_bottomPanel == null) {
+                  return const CircularProgressIndicator();
+                }
+                return _bottomPanel!;
               },
             )
           ],
