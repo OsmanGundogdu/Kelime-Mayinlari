@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
@@ -31,6 +32,9 @@ class _GameScreenState extends State<GameScreen> {
   String? currentTurn;
   bool isFirstMove = true;
   final List<String> _disabledLetters = [];
+  Timer? _timer;
+  int remainingSeconds = 0;
+  bool isMyTurn = false;
 
   Map<String, dynamic> placedTiles = {};
   Map<String, dynamic> boardTiles = {};
@@ -41,6 +45,90 @@ class _GameScreenState extends State<GameScreen> {
     super.initState();
     _drawInitialLetters();
     fetchGameData();
+    startCountdown(); // süre başlatılır
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  void startCountdown() async {
+    final doc = await FirebaseFirestore.instance
+        .collection('games')
+        .doc(widget.gameId)
+        .get();
+
+    final data = doc.data();
+    if (data == null) return;
+
+    final Timestamp? startTime = data['startTime'];
+    final int duration = data['duration'];
+
+    if (startTime == null) return;
+
+    final int startTimestamp = startTime.seconds;
+    final int now = Timestamp.now().seconds;
+    final int elapsed = now - startTimestamp;
+
+    setState(() {
+      remainingSeconds = duration - elapsed;
+    });
+
+    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (!mounted) {
+        timer.cancel();
+        return;
+      }
+
+      if (remainingSeconds > 0) {
+        setState(() {
+          remainingSeconds--;
+        });
+      } else {
+        timer.cancel();
+        handleTimeOut();
+      }
+    });
+  }
+
+  void startLocalCountdown() {
+    _timer?.cancel();
+    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      setState(() {
+        if (remainingSeconds > 0) {
+          remainingSeconds--;
+        } else {
+          timer.cancel();
+          handleTimeOut(); // süre bitince
+        }
+      });
+    });
+  }
+
+  void stopLocalCountdown() {
+    _timer?.cancel();
+  }
+
+  void handleTimeOut() async {
+    final gameRef =
+        FirebaseFirestore.instance.collection('games').doc(widget.gameId);
+    final doc = await gameRef.get();
+    final data = doc.data();
+    if (data == null) return;
+
+    final newTurn =
+        (widget.isHost && data['turn'] == 'host') ? 'guest' : 'host';
+
+    await gameRef.update({'turn': newTurn});
+    fetchGameData(); // UI güncellenir, karşı oyuncunun süresi başlar
+  }
+
+  String _formatTime(int seconds) {
+    final minutes = seconds ~/ 60;
+    final remaining = seconds % 60;
+    return '$minutes:${remaining.toString().padLeft(2, '0')}';
   }
 
   void _drawInitialLetters() async {
@@ -54,10 +142,12 @@ class _GameScreenState extends State<GameScreen> {
     if (snapshot.exists) {
       final data = snapshot.data()!;
 
+      // ✅ letter alanı yoksa, oluştur
       if (!data.containsKey('letter')) {
         await _gameManager.generateLetterPointMap(gameId);
       }
 
+      // ✅ letterPool yoksa, oluştur
       if (!data.containsKey('letterPool')) {
         await _gameManager.generateAndSaveLetterPool(gameId);
       }
@@ -106,7 +196,16 @@ class _GameScreenState extends State<GameScreen> {
               int.tryParse(data['scores'][guestID]?.toString() ?? '0') ?? 0;
           isFirstMove = data['isFirstMove'] ?? true;
           currentTurn = data['turn'];
+          isMyTurn = (widget.isHost && data['turn'] == 'host') ||
+              (!widget.isHost && data['turn'] == 'guest');
         });
+
+        if (isMyTurn) {
+          remainingSeconds = data['duration'] ?? 120;
+          startLocalCountdown();
+        } else {
+          stopLocalCountdown();
+        }
       }
     } catch (e) {
       print("Veri çekme hatası: $e");
@@ -151,11 +250,23 @@ class _GameScreenState extends State<GameScreen> {
           ],
         ),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.settings, color: Colors.white),
-            onPressed: () {},
+          Padding(
+            padding: const EdgeInsets.only(right: 16.0),
+            child: Center(
+              child: Text(
+                _formatTime(remainingSeconds),
+                style: const TextStyle(color: Colors.white, fontSize: 16),
+              ),
+            ),
           ),
         ],
+
+        // actions: [
+        //   IconButton(
+        //     icon: const Icon(Icons.settings, color: Colors.white),
+        //     onPressed: () {},
+        //   ),
+        // ],
         elevation: 4,
       ),
       backgroundColor: Colors.blue.shade900.withOpacity(0.8),
@@ -347,6 +458,7 @@ class _GameScreenState extends State<GameScreen> {
                         SnackBar(content: Text('Hata oluştu: $e')),
                       );
                     }
+                    stopLocalCountdown(); // hamle onaylandıysa süre durur
                   },
                   onResetPressed: () {
                     _resetPlacedTiles();
@@ -642,6 +754,7 @@ class _GameScreenState extends State<GameScreen> {
     int wordMultiplier = 1;
     for (var letter in placedLetters) {
       String char = letter['letter'].toString().toUpperCase();
+      totalPoints += letterPoints[char] ?? 0;
       int basePoint = letterPoints[char] ?? 0;
 
       int row = letter['row'];

@@ -1,0 +1,2 @@
+C:/Users/emirh/Desktop/Kelime-Mayinlari/android/app/.cxx/Debug/3r226x56/x86_64/CMakeFiles/edit_cache.dir
+C:/Users/emirh/Desktop/Kelime-Mayinlari/android/app/.cxx/Debug/3r226x56/x86_64/CMakeFiles/rebuild_cache.dir

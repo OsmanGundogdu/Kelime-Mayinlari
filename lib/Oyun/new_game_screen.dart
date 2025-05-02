@@ -150,6 +150,7 @@ class _NewGameScreenState extends State<NewGameScreen> {
         'guestUsername': widget.currentUsername,
         'isGameStarted': true,
         'scores.${widget.currentUserId}': 0,
+        'hostStartTime': Timestamp.now(), // ⏱️ ilk sürenin başlangıcı
       });
 
       ScaffoldMessenger.of(context).showSnackBar(
@@ -172,6 +173,7 @@ class _NewGameScreenState extends State<NewGameScreen> {
         },
         'duration': selectedDuration,
         'createdAt': FieldValue.serverTimestamp(),
+        //'hostStartTime': Timestamp.now(), // ⏱️ ilk sürenin başlangıcı
       });
 
       await newDocRef.collection('boardLetters').add({
