@@ -357,28 +357,50 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
           icon: const Icon(Icons.arrow_back, color: Colors.white),
           onPressed: () => Navigator.of(context).pop(),
         ),
-        title: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text(
-              "KELİME MAYINLARI",
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 20,
-                color: Colors.white,
-              ),
-            ),
-            Text(
-              currentTurn == (widget.isHost ? 'host' : 'guest')
-                  ? 'Senin sıran!'
-                  : 'Rakibinin sırası...',
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 14,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ],
+        title: StreamBuilder<DocumentSnapshot>(
+          stream: FirebaseFirestore.instance
+              .collection('games')
+              .doc(widget.gameId)
+              .snapshots(),
+          builder: (context, snapshot) {
+            if (!snapshot.hasData) {
+              return const Text(
+                "KELİME MAYINLARI",
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 20,
+                  color: Colors.white,
+                ),
+              );
+            }
+
+            final data = snapshot.data!.data() as Map<String, dynamic>;
+            final currentTurn = data['turn'] ?? 'host';
+            final isMyTurn = (widget.isHost && currentTurn == 'host') ||
+                (!widget.isHost && currentTurn == 'guest');
+
+            return Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text(
+                  "KELİME MAYINLARI",
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 20,
+                    color: Colors.white,
+                  ),
+                ),
+                Text(
+                  isMyTurn ? 'Senin sıran!' : 'Rakibinin sırası...',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            );
+          },
         ),
         actions: [
           Padding(
@@ -404,47 +426,77 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                 padding: const EdgeInsets.all(2.0),
                 child: AspectRatio(
                   aspectRatio: 1,
-                  child: GridView.builder(
-                    physics: const NeverScrollableScrollPhysics(),
-                    gridDelegate:
-                        const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: GameBoard.boardSize,
-                      childAspectRatio: 1,
-                    ),
-                    itemCount: GameBoard.boardSize * GameBoard.boardSize,
-                    itemBuilder: (context, index) {
-                      int row = index ~/ GameBoard.boardSize;
-                      int col = index % GameBoard.boardSize;
-                      TileType type = GameBoard.boardLayout[row][col];
+                  child: StreamBuilder<QuerySnapshot>(
+                    stream: FirebaseFirestore.instance
+                        .collection('games')
+                        .doc(widget.gameId)
+                        .collection('boardLetters')
+                        .snapshots(),
+                    builder: (context, snapshot) {
+                      if (!snapshot.hasData) {
+                        return const Center(child: CircularProgressIndicator());
+                      }
 
-                      final placedKey = '$row-$col';
-                      final placedLetter =
-                          placedTiles[placedKey] ?? boardTiles[placedKey];
+                      // Tahtadaki harfleri güncelle
+                      boardTiles.clear();
+                      for (var doc in snapshot.data!.docs) {
+                        final data = doc.data() as Map<String, dynamic>;
+                        final row = data['row'];
+                        final col = data['col'];
+                        final letter = data['letter'];
+                        final key = '$row-$col';
 
-                      return GestureDetector(
-                        onTap: () {
-                          _handleTileTap(row, col);
-                        },
-                        child: Container(
-                          margin: const EdgeInsets.all(0.2),
-                          decoration: BoxDecoration(
-                            color: _getTileColor(type),
-                            border: Border.all(
-                                color: Colors.grey.shade700.withOpacity(0.8)),
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          child: Center(
-                            child: placedLetter != null
-                                ? Text(
-                                    placedLetter['letter'],
-                                    style: const TextStyle(
-                                        color: Colors.black,
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 16),
-                                  )
-                                : _getTileLabel(type),
-                          ),
+                        boardTiles[key] = {
+                          'row': row,
+                          'col': col,
+                          'letter': letter,
+                        };
+                      }
+
+                      return GridView.builder(
+                        physics: const NeverScrollableScrollPhysics(),
+                        gridDelegate:
+                            const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: GameBoard.boardSize,
+                          childAspectRatio: 1,
                         ),
+                        itemCount: GameBoard.boardSize * GameBoard.boardSize,
+                        itemBuilder: (context, index) {
+                          int row = index ~/ GameBoard.boardSize;
+                          int col = index % GameBoard.boardSize;
+                          TileType type = GameBoard.boardLayout[row][col];
+
+                          final placedKey = '$row-$col';
+                          final placedLetter =
+                              placedTiles[placedKey] ?? boardTiles[placedKey];
+
+                          return GestureDetector(
+                            onTap: () {
+                              _handleTileTap(row, col);
+                            },
+                            child: Container(
+                              margin: const EdgeInsets.all(0.2),
+                              decoration: BoxDecoration(
+                                color: _getTileColor(type),
+                                border: Border.all(
+                                    color:
+                                        Colors.grey.shade700.withOpacity(0.8)),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Center(
+                                child: placedLetter != null
+                                    ? Text(
+                                        placedLetter['letter'],
+                                        style: const TextStyle(
+                                            color: Colors.black,
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 16),
+                                      )
+                                    : _getTileLabel(type),
+                              ),
+                            ),
+                          );
+                        },
                       );
                     },
                   ),
@@ -452,137 +504,158 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
               ),
             ),
             if (_bottomPanel == null && !_isLetterCountLoading)
-              BottomPanel(
-                letters: _playerLetters,
-                myUsername: hostUsername!,
-                myScore: hostScore ?? 0,
-                opponentUsername: guestUsername!,
-                opponentScore: guestScore ?? 0,
-                remainingLetters: _remainingLetterCount!,
-                selectedLetterChar: _selectedLetterChar,
-                onLetterTap: _handleLetterTap,
-                onSubmitPressed: () async {
-                  try {
-                    final isHostTurn = currentTurn == 'host' && widget.isHost;
-                    final isGuestTurn =
-                        currentTurn == 'guest' && !widget.isHost;
+              StreamBuilder<DocumentSnapshot>(
+                stream: FirebaseFirestore.instance
+                    .collection('games')
+                    .doc(widget.gameId)
+                    .snapshots(),
+                builder: (context, snapshot) {
+                  if (!snapshot.hasData) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
 
-                    if (!isHostTurn && !isGuestTurn) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Sıra sende değil.')),
-                      );
-                      return;
-                    }
+                  final data = snapshot.data!.data() as Map<String, dynamic>;
+                  final currentTurn = data['turn'] ?? 'host';
+                  final isMyTurn = (widget.isHost && currentTurn == 'host') ||
+                      (!widget.isHost && currentTurn == 'guest');
 
-                    final placedLetters = getCurrentTurnPlacedLetters();
+                  return BottomPanel(
+                    letters: _playerLetters,
+                    myUsername: hostUsername!,
+                    myScore: hostScore ?? 0,
+                    opponentUsername: guestUsername!,
+                    opponentScore: guestScore ?? 0,
+                    remainingLetters: _remainingLetterCount!,
+                    selectedLetterChar: _selectedLetterChar,
+                    onLetterTap: _handleLetterTap,
+                    onSubmitPressed: () async {
+                      try {
+                        final isHostTurn =
+                            currentTurn == 'host' && widget.isHost;
+                        final isGuestTurn =
+                            currentTurn == 'guest' && !widget.isHost;
 
-                    if (placedLetters.isEmpty) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                            content: Text('Tahtaya harf yerleştirin.')),
-                      );
-                      return;
-                    }
+                        if (!isHostTurn && !isGuestTurn) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Sıra sende değil.')),
+                          );
+                          return;
+                        }
 
-                    if (isFirstMove) {
-                      bool touchesCenter = placedLetters.any((letter) {
-                        return letter['row'] == 7 && letter['col'] == 7;
-                      });
+                        final placedLetters = getCurrentTurnPlacedLetters();
 
-                      if (!touchesCenter) {
+                        if (placedLetters.isEmpty) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                                content: Text('Tahtaya harf yerleştirin.')),
+                          );
+                          return;
+                        }
+
+                        if (isFirstMove) {
+                          bool touchesCenter = placedLetters.any((letter) {
+                            return letter['row'] == 7 && letter['col'] == 7;
+                          });
+
+                          if (!touchesCenter) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                  content: Text(
+                                      'İlk kelimeniz ekranın ortasına (8,8) değmelidir.')),
+                            );
+                            return;
+                          }
+                        }
+
+                        await updatePlacedLetters(placedLetters);
+                        await updateUserScoreWithPlacedLettersFromGameLetterField(
+                          widget.gameId,
+                          widget.currentUserId,
+                          placedLetters,
+                        );
+                        await savePlacedTilesToBoardLetters();
+
+                        final letterKey =
+                            widget.isHost ? 'hostLetters' : 'guestLetters';
+
+                        List<Map<String, dynamic>> remainingLetters =
+                            List.from(_playerLetters);
+
+                        Map<String, int> usedCounts = {};
+                        for (var used in placedLetters) {
+                          usedCounts[used['letter']] =
+                              (usedCounts[used['letter']] ?? 0) + 1;
+                        }
+
+                        for (var entry in usedCounts.entries) {
+                          int countToRemove = entry.value;
+                          String charToRemove = entry.key;
+
+                          for (int i = 0; i < countToRemove; i++) {
+                            int index = remainingLetters.indexWhere(
+                                (letter) => letter['char'] == charToRemove);
+                            if (index != -1) {
+                              remainingLetters.removeAt(index);
+                            }
+                          }
+                        }
+
+                        final newLetters =
+                            await _gameManager.drawLettersFromPool(
+                          widget.gameId,
+                          placedLetters.length,
+                        );
+
+                        final updatedLetters = [
+                          ...remainingLetters,
+                          ...newLetters
+                        ];
+
+                        final newTurn = widget.isHost ? 'guest' : 'host';
+                        await FirebaseFirestore.instance
+                            .collection('games')
+                            .doc(widget.gameId)
+                            .update({
+                          letterKey: updatedLetters,
+                          "isFirstMove": false,
+                          'turn': newTurn,
+                          '${newTurn}StartTime': Timestamp.now(),
+                        });
+
+                        setState(() {
+                          _playerLetters = updatedLetters;
+                          placedTiles.clear();
+                          _disabledLetters.clear();
+                        });
+
+                        await fetchGameData();
+
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
-                              content: Text(
-                                  'İlk kelimeniz ekranın ortasına (8,8) değmelidir.')),
+                              content: Text('Kelime başarıyla gönderildi!')),
                         );
-                        return;
+                      } catch (e) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('Hata oluştu: $e')),
+                        );
                       }
-                    }
-
-                    await updatePlacedLetters(placedLetters);
-                    await updateUserScoreWithPlacedLettersFromGameLetterField(
-                      widget.gameId,
-                      widget.currentUserId,
-                      placedLetters,
-                    );
-                    await savePlacedTilesToBoardLetters();
-
-                    final letterKey =
-                        widget.isHost ? 'hostLetters' : 'guestLetters';
-
-                    List<Map<String, dynamic>> remainingLetters =
-                        List.from(_playerLetters);
-
-                    Map<String, int> usedCounts = {};
-                    for (var used in placedLetters) {
-                      usedCounts[used['letter']] =
-                          (usedCounts[used['letter']] ?? 0) + 1;
-                    }
-
-                    for (var entry in usedCounts.entries) {
-                      int countToRemove = entry.value;
-                      String charToRemove = entry.key;
-
-                      for (int i = 0; i < countToRemove; i++) {
-                        int index = remainingLetters.indexWhere(
-                            (letter) => letter['char'] == charToRemove);
-                        if (index != -1) {
-                          remainingLetters.removeAt(index);
-                        }
-                      }
-                    }
-
-                    final newLetters = await _gameManager.drawLettersFromPool(
-                      widget.gameId,
-                      placedLetters.length,
-                    );
-
-                    final updatedLetters = [...remainingLetters, ...newLetters];
-
-                    final newTurn = widget.isHost ? 'guest' : 'host';
-                    await FirebaseFirestore.instance
-                        .collection('games')
-                        .doc(widget.gameId)
-                        .update({
-                      letterKey: updatedLetters,
-                      "isFirstMove": false,
-                      'turn': newTurn,
-                      // Diğer oyuncunun süresini başlat
-                      '${newTurn}StartTime': Timestamp.now(),
-                    });
-
-                    setState(() {
-                      _playerLetters = updatedLetters;
-                      placedTiles.clear();
-                      _disabledLetters.clear();
-                    });
-
-                    await fetchGameData();
-
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                          content: Text('Kelime başarıyla gönderildi!')),
-                    );
-                  } catch (e) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Hata oluştu: $e')),
-                    );
-                  }
-                  stopLocalCountdown();
-                },
-                onResetPressed: () {
-                  _resetPlacedTiles();
-                  setState(() {
-                    _disabledLetters.clear();
-                  });
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Tekrar yazabilirsiniz.')),
+                      stopLocalCountdown();
+                    },
+                    onResetPressed: () {
+                      _resetPlacedTiles();
+                      setState(() {
+                        _disabledLetters.clear();
+                      });
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Tekrar yazabilirsiniz.')),
+                      );
+                    },
+                    disabledLetters: _disabledLetters,
+                    onPassPressed: () async => await passTurn(),
+                    onSurrenderPressed: () async => await surrender(),
+                    isMyTurn: isMyTurn,
                   );
                 },
-                disabledLetters: _disabledLetters,
-                onPassPressed: () async => await passTurn(),
-                onSurrenderPressed: () async => await surrender(),
-                isMyTurn: isMyTurn,
               ),
           ],
         ),
