@@ -961,7 +961,18 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       return;
     }
 
-    await gameDocRef.update({'turn': newTurn});
+    // Karşı oyuncunun süresini sıfırla ve yeniden başlat
+    final duration = (gameData['duration'] ?? 2) * 60;
+    await gameDocRef.update({
+      'turn': newTurn,
+      '${newTurn}StartTime': Timestamp.now(),
+    });
+
+    setState(() {
+      remainingSeconds = duration;
+      _lastTimerUpdate = DateTime.now();
+    });
+
     await fetchGameData(); // UI güncelle
   }
 
