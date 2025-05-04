@@ -43,6 +43,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
   Map<String, dynamic> placedTiles = {};
   Map<String, dynamic> boardTiles = {};
   String _selectedLetterChar = '';
+  int _consecutivePassCount = 0;
 
   @override
   void initState() {
@@ -232,38 +233,34 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
 
     if (snapshot.exists) {
       final data = snapshot.data()!;
-      final currentTurn = data['turn'] ?? 'host';
 
-      // Sadece sırası olan oyuncuya harfler ver
-      if ((isHost && currentTurn == 'host') ||
-          (!isHost && currentTurn == 'guest')) {
-        // ✅ letter alanı yoksa, oluştur
-        if (!data.containsKey('letter')) {
-          await _gameManager.generateLetterPointMap(gameId);
-        }
+      // ✅ letter alanı yoksa, oluştur
+      if (!data.containsKey('letter')) {
+        await _gameManager.generateLetterPointMap(gameId);
+      }
 
-        // ✅ letterPool yoksa, oluştur
-        if (!data.containsKey('letterPool')) {
-          await _gameManager.generateAndSaveLetterPool(gameId);
-        }
+      // ✅ letterPool yoksa, oluştur
+      if (!data.containsKey('letterPool')) {
+        await _gameManager.generateAndSaveLetterPool(gameId);
+      }
 
-        if (data.containsKey(key)) {
-          final savedLetters = data[key] is String
-              ? List<Map<String, dynamic>>.from(jsonDecode(data[key]))
-              : List<Map<String, dynamic>>.from(data[key]);
+      // Her iki oyuncunun harflerini kontrol et
+      if (data.containsKey(key)) {
+        final savedLetters = data[key] is String
+            ? List<Map<String, dynamic>>.from(jsonDecode(data[key]))
+            : List<Map<String, dynamic>>.from(data[key]);
 
-          setState(() {
-            _playerLetters = savedLetters;
-          });
-        } else {
-          await _gameManager.loadLetterPool(gameId);
-          final drawn = await _gameManager.drawLettersFromPool(gameId, 7);
-          await gameDoc.update({key: drawn});
+        setState(() {
+          _playerLetters = savedLetters;
+        });
+      } else {
+        await _gameManager.loadLetterPool(gameId);
+        final drawn = await _gameManager.drawLettersFromPool(gameId, 7);
+        await gameDoc.update({key: drawn});
 
-          setState(() {
-            _playerLetters = drawn;
-          });
-        }
+        setState(() {
+          _playerLetters = drawn;
+        });
       }
     }
   }
@@ -893,6 +890,9 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     }
     totalPoints *= wordMultiplier;
 
+    // Puanın yarısını al
+    totalPoints = (totalPoints / 2).round();
+
     Map<String, dynamic> currentScores =
         Map<String, dynamic>.from(gameData['scores'] ?? {});
     int existingScore =
@@ -912,6 +912,53 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
 
     final currentTurn = gameData['turn'];
     final newTurn = currentTurn == 'host' ? 'guest' : 'host';
+
+    // Pas geçme sayısını güncelle
+    if (currentTurn == (widget.isHost ? 'host' : 'guest')) {
+      _consecutivePassCount++;
+    } else {
+      _consecutivePassCount = 1;
+    }
+
+    // Eğer 2 kez üst üste pas geçildiyse oyunu bitir
+    if (_consecutivePassCount >= 2) {
+      final surrenderingUserId =
+          widget.isHost ? gameData['hostUserID'] : gameData['guestUserID'];
+      final winnerUserId =
+          widget.isHost ? gameData['guestUserID'] : gameData['hostUserID'];
+      final winnerKey = widget.isHost ? 'guest' : 'host';
+
+      await gameDocRef.update({
+        'isGameOver': true,
+        'isGameStarted': false,
+        'winner': winnerKey,
+        'scores': {
+          surrenderingUserId: 0,
+          winnerUserId: 1,
+        },
+      });
+
+      final usersCollection = FirebaseFirestore.instance.collection('users');
+      await usersCollection.doc(surrenderingUserId).update({
+        'gameplayed': FieldValue.increment(1),
+      });
+
+      await usersCollection.doc(winnerUserId).update({
+        'gameplayed': FieldValue.increment(1),
+        'gamewon': FieldValue.increment(1),
+      });
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+              content: Text(
+                  '2 kez üst üste pas geçtiğiniz için oyunu kaybettiniz.')),
+        );
+        Navigator.of(context).pop();
+        Navigator.of(context).pop();
+      }
+      return;
+    }
 
     await gameDocRef.update({'turn': newTurn});
     await fetchGameData(); // UI güncelle
