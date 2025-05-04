@@ -968,10 +968,12 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       '${newTurn}StartTime': Timestamp.now(),
     });
 
-    setState(() {
-      remainingSeconds = duration;
-      _lastTimerUpdate = DateTime.now();
-    });
+    if (mounted) {
+      setState(() {
+        remainingSeconds = duration;
+        _lastTimerUpdate = DateTime.now();
+      });
+    }
 
     await fetchGameData(); // UI güncelle
   }
@@ -1013,12 +1015,14 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       'gamewon': FieldValue.increment(1),
     });
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Oyunu teslim ettiniz.')),
-    );
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Oyunu teslim ettiniz.')),
+      );
 
-    Navigator.of(context).pop();
-    Navigator.of(context).pop();
+      Navigator.of(context).pop();
+      Navigator.of(context).pop();
+    }
   }
 }
 
