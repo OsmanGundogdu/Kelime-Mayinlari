@@ -582,6 +582,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
                 disabledLetters: _disabledLetters,
                 onPassPressed: () async => await passTurn(),
                 onSurrenderPressed: () async => await surrender(),
+                isMyTurn: isMyTurn,
               ),
           ],
         ),
