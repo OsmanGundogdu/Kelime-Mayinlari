@@ -14,6 +14,7 @@ class BottomPanel extends StatelessWidget {
   final VoidCallback onResetPressed;
   final VoidCallback onPassPressed;
   final VoidCallback onSurrenderPressed;
+  final bool isMyTurn;
 
   const BottomPanel({
     super.key,
@@ -30,6 +31,7 @@ class BottomPanel extends StatelessWidget {
     required this.onResetPressed,
     required this.onPassPressed,
     required this.onSurrenderPressed,
+    required this.isMyTurn,
   });
 
   @override
@@ -159,9 +161,18 @@ class BottomPanel extends StatelessWidget {
                   ),
                   const SizedBox(width: 25),
                   ElevatedButton(
-                    onPressed: onPassPressed,
+                    onPressed: isMyTurn
+                        ? onPassPressed
+                        : () {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Sıra sizde değil!'),
+                                duration: Duration(seconds: 2),
+                              ),
+                            );
+                          },
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.blueGrey,
+                      backgroundColor: isMyTurn ? Colors.blueGrey : Colors.grey,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
