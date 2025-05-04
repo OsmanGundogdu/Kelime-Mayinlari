@@ -15,13 +15,21 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      title: 'Kelime Mayınları',
+      theme: ThemeData(
+        primarySwatch: Colors.blue,
+        visualDensity: VisualDensity.adaptivePlatformDensity,
+      ),
+      home: const LoginScreen(),
       routes: {
         '/activeGames': (context) => const ActiveGamesScreen(),
       },
-      debugShowCheckedModeBanner: false,
-      title: 'Kullanıcı Giriş/Kayıt',
-      theme: ThemeData(primarySwatch: Colors.blue),
-      home: const LoginScreen(),
+      onUnknownRoute: (settings) {
+        return MaterialPageRoute(
+          builder: (context) => const LoginScreen(),
+        );
+      },
     );
   }
 }
